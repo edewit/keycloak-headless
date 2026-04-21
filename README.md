@@ -22,7 +22,30 @@ Always import `keycloak-headless/provider` (side-effect or explicit imports) in 
 
 ## Web components
 
-Mount `<kc-provider>` with `url`, `realm`, and `clientId` (and optional `scope`). Nested components consume `authContext`.
+Mount `<kc-provider>` with `url`, `realm`, and `client-id` (or the `clientId` property in frameworks). Optional `scope` and any [Keycloak `init` options](https://www.keycloak.org/docs/latest/securing_apps/#_javascript_adapter) below are forwarded to `keycloak.init()`. Nested components consume `authContext`.
+
+**`kc-provider` init attributes** (omit optional flags to keep Keycloak defaults; boolean flags use `true` / `false`, or `0` / `no` for false):
+
+| Attribute | Maps to `KeycloakInitOptions` |
+|-----------|-------------------------------|
+| `on-load` | `onLoad` — `check-sso` (default) or `login-required` |
+| `scope` | `scope` |
+| `use-nonce` | `useNonce` |
+| `adapter` | `adapter` — `default`, `cordova`, or `cordova-native` |
+| `check-login-iframe` | `checkLoginIframe` |
+| `check-login-iframe-interval` | `checkLoginIframeInterval` |
+| `response-mode` | `responseMode` — `query` or `fragment` |
+| `redirect-uri` | `redirectUri` |
+| `silent-check-sso-redirect-uri` | `silentCheckSsoRedirectUri` |
+| `silent-check-sso-fallback` | `silentCheckSsoFallback` |
+| `flow` | `flow` — `standard`, `implicit`, or `hybrid` |
+| `pkce-method` | `pkceMethod` — `S256` or `false` (string) to disable PKCE |
+| `enable-logging` | `enableLogging` |
+| `message-receive-timeout` | `messageReceiveTimeout` |
+| `locale` | `locale` |
+| `logout-method` | `logoutMethod` — `GET` or `POST` |
+
+Programmatic-only (no HTML attribute): set the `token`, `refreshToken`, `idToken`, and `timeSkew` properties when you need to restore a session from your host app.
 
 | Element | Role |
 |---------|------|

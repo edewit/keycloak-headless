@@ -35,6 +35,9 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, "src/index.ts"),
         "react/index": resolve(__dirname, "src/react/index.ts"),
+        "vue/index": resolve(__dirname, "src/vue/index.ts"),
+        "svelte/index": resolve(__dirname, "src/svelte/index.ts"),
+        "solid/index": resolve(__dirname, "src/solid/index.ts"),
         "components/provider/index": resolve(
           __dirname,
           "src/components/provider/index.ts",
@@ -51,6 +54,10 @@ export default defineConfig({
         "react",
         "react/jsx-runtime",
         "@lit/react",
+        "vue",
+        "svelte",
+        "svelte/store",
+        "solid-js",
       ],
       output: {
         preserveModules: true,

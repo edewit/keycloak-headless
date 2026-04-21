@@ -1,20 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref, shallowRef } from "vue";
-import {
-  subscribeAuthContext,
-  type AuthState,
-} from "keycloak-headless/provider";
+import { ref } from "vue";
+import { useKeycloakAuth } from "keycloak-headless/vue";
 
 const hostRef = ref<HTMLDivElement | null>(null);
-const auth = shallowRef<AuthState>({});
-
-onMounted(() => {
-  const el = hostRef.value;
-  if (!el) return;
-  subscribeAuthContext(el, (value) => {
-    auth.value = value;
-  });
-});
+const auth = useKeycloakAuth(hostRef);
 
 </script>
 

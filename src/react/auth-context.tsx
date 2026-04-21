@@ -19,7 +19,7 @@ export function AuthBridge({ children }: { children: ReactNode }) {
   useEffect(() => {
     const el = hostRef.current;
     if (!el) return;
-    subscribeAuthContext(el, setAuth);
+    return subscribeAuthContext(el, setAuth);
   }, []);
 
   return (

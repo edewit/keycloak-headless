@@ -1,6 +1,6 @@
 # Keycloak Headless
 
-Lit-based web components and a thin React wrapper around [keycloak-js](https://www.keycloak.org/docs/latest/securing_apps/#_javascript_adapter), with shared auth state via [@lit/context](https://lit.dev/docs/data/context/).
+Lit-based web components and small framework helpers (React, Vue, Svelte, Solid) around [keycloak-js](https://www.keycloak.org/docs/latest/securing_apps/#_javascript_adapter), with shared auth state via [@lit/context](https://lit.dev/docs/data/context/).
 
 ## Installation
 
@@ -17,6 +17,9 @@ npm install keycloak-headless
 | `keycloak-headless` | `authContext`, `AuthState`, and `subscribeAuthContext` only (no custom element registration). |
 | `keycloak-headless/provider` | Registers all `kc-*` elements and exports them plus `KcProvider`, `authContext`, `subscribeAuthContext`. |
 | `keycloak-headless/react` | `KeycloakProvider`, `useAuth`, `AuthBridge`, and context helpers (registers `kc-provider` when used). |
+| `keycloak-headless/vue` | `useKeycloakAuth`, `subscribeAuthContext`, and `AuthState` (no custom element registration). |
+| `keycloak-headless/svelte` | `useKeycloakAuth` store factory, `subscribeAuthContext`, and `AuthState`. |
+| `keycloak-headless/solid` | `useKeycloakAuth`, `subscribeAuthContext`, and `AuthState`. |
 
 Always import `keycloak-headless/provider` (side-effect or explicit imports) in apps that use the web components, so custom elements are defined.
 
@@ -85,30 +88,65 @@ function AuthPanel() {
 
 `KeycloakProvider` renders `<kc-provider>` and `AuthBridge`, which bridges Lit context into `AuthReactContext` for `useAuth()`.
 
-## Vue (and other frameworks)
+## Vue
 
-Use `subscribeAuthContext` with a template ref on an element inside `<kc-provider>`:
+Import `keycloak-headless/vue` after `keycloak-headless/provider` so custom elements are defined. Use a template ref on a normal element inside `<kc-provider>`:
 
-```ts
-import { onMounted, ref, shallowRef } from "vue";
-import {
-  subscribeAuthContext,
-  type AuthState,
-} from "keycloak-headless/provider";
+```vue
+<script setup lang="ts">
+import "keycloak-headless/provider";
+import { ref } from "vue";
+import { useKeycloakAuth } from "keycloak-headless/vue";
 
 const hostRef = ref<HTMLElement | null>(null);
-const auth = shallowRef<AuthState>({});
+const auth = useKeycloakAuth(hostRef);
+</script>
 
-onMounted(() => {
-  const el = hostRef.value;
-  if (!el) return;
-  subscribeAuthContext(el, (value) => {
-    auth.value = value;
-  });
-});
+<template>
+  <kc-provider url="…" realm="…" client-id="…">
+    <div ref="hostRef">…</div>
+  </kc-provider>
+</template>
 ```
 
-The same helper is used internally by `AuthBridge` in React.
+`useKeycloakAuth` mirrors the React `AuthBridge` pattern: it subscribes to Lit context and tears down when the host ref or component scope changes.
+
+## Svelte
+
+```svelte
+<script lang="ts">
+  import "keycloak-headless/provider";
+  import { useKeycloakAuth } from "keycloak-headless/svelte";
+
+  let host: HTMLDivElement | undefined;
+  const auth = useKeycloakAuth(() => host ?? null);
+</script>
+
+<kc-provider url="…" realm="…" client-id="…">
+  <div bind:this={host}>{$auth.keycloak ? "Ready" : "…"}</div>
+</kc-provider>
+```
+
+The store updates when `bind:this` attaches the host node.
+
+## Solid
+
+```tsx
+import "keycloak-headless/provider";
+import { useKeycloakAuth } from "keycloak-headless/solid";
+
+export function Panel() {
+  let host: HTMLDivElement | undefined;
+  const auth = useKeycloakAuth(() => host ?? null);
+  return (
+    <div ref={(el) => (host = el)}>{auth().keycloak ? "Ready" : "…"}</div>
+  );
+}
+```
+
+## Any framework
+
+`subscribeAuthContext` from `keycloak-headless` or `keycloak-headless/provider` dispatches a Lit context request from any `Element` under `<kc-provider>`. It returns a disposer so you can unsubscribe on teardown. The React `AuthBridge`, `useKeycloakAuth` helpers above, and framework examples all build on this.
 
 ## Auth state
 

@@ -21,6 +21,7 @@ export default defineConfig({
         rootDir,
         "src/components/provider/index.ts",
       ),
+      "keycloak-headless/vue": resolve(rootDir, "src/vue/index.ts"),
     },
   },
   server: {

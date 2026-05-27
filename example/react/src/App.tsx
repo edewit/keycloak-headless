@@ -1,8 +1,16 @@
 import "keycloak-headless/provider";
-import { KeycloakProvider, useAuth } from "keycloak-headless/react";
+import {
+  KeycloakProvider,
+  useAuth,
+  useKeycloakConfigRoles,
+} from "keycloak-headless/react";
+
+import { KEYCLOAK_CONFIG } from "./keycloak-config.generated.js";
+import { realmRolesAttr } from "./realm-roles-attr.js";
 
 function AuthDemo() {
   const { keycloak, authenticated, error } = useAuth();
+  const { hasRealmRole } = useKeycloakConfigRoles(KEYCLOAK_CONFIG);
 
   return (
     <div style={{ fontFamily: "system-ui", padding: "1rem" }}>
@@ -32,8 +40,17 @@ function AuthDemo() {
               </kc-logout-button>{" "}
               — via <code>kc-logout-button</code>
             </p>
-            {/* Replace roles with a realm role assigned to your user in Keycloak */}
-            <kc-render-roles roles="admin" role-kind="realm" match="any">
+            {hasRealmRole("admin") && (
+              <p style={{ background: "#f3e5f5", padding: "0.5rem" }}>
+                Typed check: you have the <code>admin</code> realm role (
+                <code>useKeycloakConfigRoles</code>).
+              </p>
+            )}
+            <kc-render-roles
+              roles={realmRolesAttr("admin")}
+              role-kind="realm"
+              match="any"
+            >
               <p style={{ background: "#e3f2fd", padding: "0.5rem" }}>
                 You have the configured realm role (via{" "}
                 <code>kc-render-roles</code>).

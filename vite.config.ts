@@ -38,6 +38,7 @@ export default defineConfig({
         "vue/index": resolve(__dirname, "src/vue/index.ts"),
         "svelte/index": resolve(__dirname, "src/svelte/index.ts"),
         "solid/index": resolve(__dirname, "src/solid/index.ts"),
+        "vite/index": resolve(__dirname, "src/vite/index.ts"),
         "components/provider/index": resolve(
           __dirname,
           "src/components/provider/index.ts",
@@ -48,6 +49,9 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
+        "vite",
+        "node:fs",
+        "node:path",
         "lit",
         "lit/decorators.js",
         "lit/directives/class-map.js",

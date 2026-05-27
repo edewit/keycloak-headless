@@ -4,6 +4,10 @@ node_modules/
 # Build output
 dist/
 storybook-static/
+providers/**/target/
+providers/**/.classpath
+providers/**/.project
+providers/**/.settings/
 
 # IDE
 .vscode/
@@ -27,3 +31,6 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+
+# Vite-generated typed Keycloak roles (example apps)
+example/**/src/keycloak-config.generated.ts

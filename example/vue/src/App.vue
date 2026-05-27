@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { useKeycloakAuth } from "keycloak-headless/vue";
+import "keycloak-headless/provider";
+import { computed, ref } from "vue";
+import { useKeycloakAuth, useKeycloakConfigRoles } from "keycloak-headless/vue";
+
+import { KEYCLOAK_CONFIG } from "./keycloak-config.generated.js";
+import { realmRolesAttr } from "./realm-roles-attr.js";
 
 const hostRef = ref<HTMLDivElement | null>(null);
 const auth = useKeycloakAuth(hostRef);
-
+const roleChecks = useKeycloakConfigRoles(auth, KEYCLOAK_CONFIG);
+const showAdmin = computed(() => roleChecks.value.hasRealmRole("admin"));
 </script>
 
 <template>
@@ -12,7 +17,7 @@ const auth = useKeycloakAuth(hostRef);
   <kc-provider
     url="http://localhost:8080/"
     realm="master"
-    clientId="example-spa"
+    client-id="example-spa"
   >
     <div
       ref="hostRef"
@@ -47,9 +52,15 @@ const auth = useKeycloakAuth(hostRef);
             </kc-logout-button>
             — via <code>kc-logout-button</code>
           </p>
-          <!-- Replace roles with a realm role assigned to your user in Keycloak -->
+          <p
+            v-if="showAdmin"
+            style="background: #f3e5f5; padding: 0.5rem"
+          >
+            Typed check: you have the <code>admin</code> realm role (
+            <code>useKeycloakConfigRoles</code>).
+          </p>
           <kc-render-roles
-            roles="example-realm-role-replace-me"
+            :roles="realmRolesAttr('admin')"
             role-kind="realm"
             match="any"
           >

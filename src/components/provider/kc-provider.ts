@@ -2,12 +2,54 @@ import { html, LitElement } from "lit";
 import { provide } from "@lit/context";
 import { customElement, property, state } from "lit/decorators.js";
 import Keycloak, {
-  type KeycloakError,
+  type KeycloakError as KeycloakJsError,
   type KeycloakInitOptions,
   type KeycloakOnLoad,
 } from "keycloak-js";
 
 import { authContext, type AuthState } from "./kc-context.js";
+import {
+  KeycloakError,
+  ErrorCodes,
+  wrapError,
+  isConfigError,
+} from "../../errors/keycloak-errors.js";
+import {
+  type ErrorLogger,
+  defaultErrorLogger,
+  LogLevel,
+} from "../../errors/error-logger.js";
+
+/**
+ * Event detail types for custom events
+ */
+export interface KcErrorDetail {
+  error: KeycloakError;
+  timestamp: number;
+  canRetry: boolean;
+}
+
+export interface KcRetryDetail {
+  attempt: number;
+  maxAttempts: number;
+  delay: number;
+  error: unknown;
+}
+
+export interface KcStateChangeDetail {
+  previous: AuthState;
+  current: AuthState;
+}
+
+/**
+ * Retry configuration
+ */
+interface RetryConfig {
+  maxAttempts: number;
+  initialDelay: number;
+  maxDelay: number;
+  backoffMultiplier: number;
+}
 
 /**
  * Converter for boolean init flags: omit the attribute to use Keycloak defaults.
@@ -315,9 +357,222 @@ export class KcProvider extends LitElement {
   @property({ type: Number, attribute: false })
   timeSkew?: number;
 
+  /**
+   * Maximum number of retry attempts for failed initialization.
+   * Set to 1 to disable retry (single attempt only).
+   *
+   * @default 3
+   */
+  @property({ type: Number, attribute: "retry-attempts" })
+  retryAttempts: number = 3;
+
+  /**
+   * Initial delay in milliseconds before first retry.
+   * Subsequent retries use exponential backoff.
+   *
+   * @default 1000
+   */
+  @property({ type: Number, attribute: "retry-delay" })
+  retryDelay: number = 1000;
+
+  /**
+   * Enable automatic retry on initialization failure.
+   * If false, only one initialization attempt is made.
+   *
+   * @default true
+   */
+  @property({ type: Boolean, attribute: "auto-retry" })
+  autoRetry: boolean = true;
+
+  /**
+   * Callback function called when an error occurs.
+   * Receives the wrapped KeycloakError with user-friendly messages.
+   */
+  @property({ attribute: false })
+  onError?: (error: KeycloakError) => void;
+
+  /**
+   * Callback function called when a retry attempt is made.
+   */
+  @property({ attribute: false })
+  onRetry?: (detail: KcRetryDetail) => void;
+
+  /**
+   * Callback function called when auth state changes.
+   */
+  @property({ attribute: false })
+  onStateChange?: (detail: KcStateChangeDetail) => void;
+
+  /**
+   * Error logger instance for logging errors.
+   * Defaults to console logger if not provided.
+   */
+  @property({ attribute: false })
+  errorLogger?: ErrorLogger;
+
   @provide({ context: authContext })
   @state()
   authData: AuthState = { keycloak: undefined };
+
+  @state()
+  private initAttempt: number = 0;
+
+  @state()
+  private isRetrying: boolean = false;
+
+  /**
+   * Get the error logger instance (use default if not set)
+   */
+  private getErrorLogger(): ErrorLogger {
+    return this.errorLogger ?? defaultErrorLogger;
+  }
+
+  /**
+   * Dispatch error event and call error callback
+   */
+  private dispatchError(error: KeycloakError, context?: Record<string, unknown>): void {
+    const timestamp = Date.now();
+    
+    // Log the error
+    this.getErrorLogger().log({
+      timestamp,
+      level: LogLevel.ERROR,
+      error,
+      context,
+    });
+    
+    // Dispatch event
+    this.dispatchEvent(new CustomEvent<KcErrorDetail>('kc-error', {
+      detail: {
+        error,
+        timestamp,
+        canRetry: error.recoverable,
+      },
+      bubbles: true,
+      composed: true,
+    }));
+    
+    // Call callback
+    this.onError?.(error);
+  }
+
+  /**
+   * Dispatch state change event and call state change callback
+   */
+  private dispatchStateChange(previous: AuthState, current: AuthState): void {
+    this.dispatchEvent(new CustomEvent<KcStateChangeDetail>('kc-state-change', {
+      detail: { previous, current },
+      bubbles: true,
+      composed: true,
+    }));
+    this.onStateChange?.({ previous, current });
+  }
+
+  /**
+   * Update auth data and dispatch events
+   */
+  private updateAuthData(newData: AuthState): void {
+    const previous = this.authData;
+    this.authData = newData;
+    
+    this.dispatchStateChange(previous, newData);
+    
+    if (newData.error && newData.error instanceof KeycloakError) {
+      this.dispatchError(newData.error);
+    }
+  }
+
+  /**
+   * Sleep for specified milliseconds
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Initialize Keycloak with retry logic
+   */
+  private async initWithRetry(keycloak: Keycloak, config: KeycloakInitOptions): Promise<boolean> {
+    const retryConfig: RetryConfig = {
+      maxAttempts: this.autoRetry ? this.retryAttempts : 1,
+      initialDelay: this.retryDelay,
+      maxDelay: 30000,
+      backoffMultiplier: 2,
+    };
+
+    let lastError: unknown;
+    
+    for (let attempt = 1; attempt <= retryConfig.maxAttempts; attempt++) {
+      this.initAttempt = attempt;
+      
+      try {
+        this.isRetrying = attempt > 1;
+        
+        // Update loading message during retry
+        if (this.isRetrying) {
+          this.updateAuthData({
+            ...this.authData,
+            loading: true,
+            loadingMessage: `Retrying... (attempt ${attempt} of ${retryConfig.maxAttempts})`,
+          });
+        }
+        
+        const authenticated = await keycloak.init(config);
+        this.isRetrying = false;
+        return authenticated;
+      } catch (error) {
+        lastError = error;
+        
+        // Don't retry on configuration errors
+        if (isConfigError(error)) {
+          throw wrapError(error, ErrorCodes.INVALID_CONFIG);
+        }
+        
+        // Last attempt - throw error
+        if (attempt === retryConfig.maxAttempts) {
+          throw wrapError(error, ErrorCodes.INIT_FAILED);
+        }
+        
+        // Calculate delay with exponential backoff
+        const delay = Math.min(
+          retryConfig.initialDelay * Math.pow(retryConfig.backoffMultiplier, attempt - 1),
+          retryConfig.maxDelay
+        );
+        
+        // Dispatch retry event
+        const retryDetail: KcRetryDetail = {
+          attempt,
+          maxAttempts: retryConfig.maxAttempts,
+          delay,
+          error,
+        };
+        
+        this.dispatchEvent(new CustomEvent<KcRetryDetail>('kc-retry', {
+          detail: retryDetail,
+          bubbles: true,
+          composed: true,
+        }));
+        this.onRetry?.(retryDetail);
+        
+        await this.sleep(delay);
+      }
+    }
+    
+    throw lastError;
+  }
+
+  /**
+   * Manually retry initialization
+   */
+  public async retry(): Promise<void> {
+    this.updateAuthData({
+      keycloak: this.authData.keycloak,
+      error: undefined,
+      loading: true,
+      loadingMessage: 'Retrying initialization...',
+    });
+    await this.firstUpdated();
+  }
 
   /**
    * Builds Keycloak initialization options from component properties.
@@ -410,54 +665,112 @@ export class KcProvider extends LitElement {
    * @private
    */
   override async firstUpdated() {
+    // Set initial loading state
+    this.updateAuthData({
+      loading: true,
+      loadingMessage: 'Initializing authentication...'
+    });
+
     const keycloak = new Keycloak({
       url: this.url,
       realm: this.realm,
       clientId: this.clientId,
     });
+    
     // Helper to sync auth state from Keycloak instance to Lit context
     const syncAuthFromKeycloak = (patch?: Partial<AuthState>) => {
-      this.authData = {
+      this.updateAuthData({
         keycloak,
         authenticated: keycloak.authenticated === true,
         ...patch,
-      };
+      });
     };
     
     // Set up Keycloak event handlers to propagate auth state changes
     keycloak.onAuthSuccess = () => {
-      syncAuthFromKeycloak({ error: undefined });
+      syncAuthFromKeycloak({ error: undefined, loading: false });
+      this.dispatchEvent(new CustomEvent('auth-success', {
+        bubbles: true,
+        composed: true,
+      }));
     };
+    
     keycloak.onAuthRefreshSuccess = () => {
       syncAuthFromKeycloak({ error: undefined });
+      this.dispatchEvent(new CustomEvent('auth-refresh-success', {
+        bubbles: true,
+        composed: true,
+      }));
     };
+    
     keycloak.onAuthLogout = () => {
       syncAuthFromKeycloak({ error: undefined });
+      this.dispatchEvent(new CustomEvent('auth-logout', {
+        bubbles: true,
+        composed: true,
+      }));
     };
-    keycloak.onAuthError = (errorData?: KeycloakError) => {
-      syncAuthFromKeycloak({
-        error: errorData ?? new Error("Keycloak authentication error"),
-      });
+    
+    keycloak.onAuthError = (errorData?: KeycloakJsError) => {
+      const error = wrapError(
+        errorData ?? new Error("Keycloak authentication error"),
+        ErrorCodes.AUTH_FAILED
+      );
+      syncAuthFromKeycloak({ error });
+      this.dispatchEvent(new CustomEvent('auth-error', {
+        detail: { error },
+        bubbles: true,
+        composed: true,
+      }));
     };
+    
     keycloak.onAuthRefreshError = () => {
-      syncAuthFromKeycloak({
-        error: new Error("Keycloak token refresh failed"),
-      });
+      const error = wrapError(
+        new Error("Keycloak token refresh failed"),
+        ErrorCodes.TOKEN_REFRESH_FAILED
+      );
+      syncAuthFromKeycloak({ error });
+      this.dispatchEvent(new CustomEvent('auth-refresh-error', {
+        detail: { error },
+        bubbles: true,
+        composed: true,
+      }));
     };
+    
     keycloak.onTokenExpired = () => {
       syncAuthFromKeycloak();
+      this.dispatchEvent(new CustomEvent('token-expired', {
+        bubbles: true,
+        composed: true,
+      }));
     };
+    
     keycloak.onActionUpdate = () => {
       syncAuthFromKeycloak();
     };
-    // Initialize Keycloak with configured options
+    
+    // Initialize Keycloak with retry logic
     try {
-      const authenticated = await keycloak.init(this.buildInitOptions());
+      const authenticated = await this.initWithRetry(keycloak, this.buildInitOptions());
 
-      this.authData = { keycloak, authenticated, error: undefined };
+      this.updateAuthData({
+        keycloak,
+        authenticated,
+        error: undefined,
+        loading: false,
+      });
     } catch (error) {
       console.error("Keycloak init failed:", error);
-      this.authData = { keycloak, authenticated: false, error };
+      const wrappedError = error instanceof KeycloakError
+        ? error
+        : wrapError(error, ErrorCodes.INIT_FAILED);
+      
+      this.updateAuthData({
+        keycloak,
+        authenticated: false,
+        error: wrappedError,
+        loading: false,
+      });
     }
   }
 

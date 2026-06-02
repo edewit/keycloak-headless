@@ -60,6 +60,8 @@ Programmatic-only (no HTML attribute): set the `token`, `refreshToken`, `idToken
 | `<kc-render-authenticated>` | Slot visible only when `authenticated` is true. |
 | `<kc-render-guest>` | Slot visible when Keycloak exists and the user is not authenticated. |
 | `<kc-render-roles>` | Slot when the user has required realm or client roles (`roles`, `role-kind`, `match`, optional `resource`). |
+| `<kc-error-display>` | Displays errors with user-friendly messages and retry button. |
+| `<kc-loading>` | Shows loading spinner during authentication. |
 
 Slot-based buttons: put a real `<button type="button">` (or other focusable control) inside each interactive component so keyboard and screen-reader behavior stay correct.
 
@@ -212,6 +214,8 @@ Example `pnpm build` scripts run `tsc --noEmit` before Vite, so invalid role nam
 - `keycloak` — adapter instance (when initialization ran).
 - `authenticated` — boolean when known.
 - `error` — `unknown`; set if `init()` throws, on `onAuthError`, or on `onAuthRefreshError`. Cleared on successful auth sync.
+- `loading` — boolean indicating if authentication is in progress.
+- `loadingMessage` — optional message to display during loading.
 
 Narrow errors in UI, for example:
 
@@ -220,6 +224,263 @@ function message(err: unknown): string {
   if (err instanceof Error) return err.message;
   return String(err);
 }
+```
+
+## Error Handling
+
+The library provides comprehensive error handling with typed errors, automatic retry, user-friendly messages, and recovery strategies.
+
+### Error Types
+
+All Keycloak errors extend `KeycloakError` with structured error codes:
+
+```ts
+import { KeycloakError, ErrorCodes } from "keycloak-headless";
+
+// Error types:
+// - KeycloakInitError - Initialization failures
+// - KeycloakAuthError - Authentication failures
+// - KeycloakTokenError - Token refresh failures
+// - KeycloakConfigError - Configuration errors
+// - KeycloakNetworkError - Network errors
+
+if (error instanceof KeycloakError) {
+  console.log(error.code);           // e.g., "KC_INIT_1001"
+  console.log(error.userMessage);    // User-friendly message
+  console.log(error.suggestedAction); // Recovery suggestion
+  console.log(error.recoverable);    // Can retry?
+}
+```
+
+### Automatic Retry
+
+`<kc-provider>` automatically retries failed initialization with exponential backoff:
+
+```html
+<kc-provider
+  url="https://keycloak.example.com/"
+  realm="myrealm"
+  client-id="my-spa"
+  retry-attempts="3"
+  retry-delay="1000"
+  auto-retry="true">
+</kc-provider>
+```
+
+**Retry Attributes:**
+- `retry-attempts` - Maximum retry attempts (default: 3)
+- `retry-delay` - Initial delay in ms (default: 1000)
+- `auto-retry` - Enable automatic retry (default: true)
+
+### Error Events
+
+Listen for error events to handle failures:
+
+```ts
+const provider = document.querySelector('kc-provider');
+
+// Error occurred
+provider.addEventListener('kc-error', (e) => {
+  const { error, canRetry, timestamp } = e.detail;
+  console.error(error.userMessage);
+  if (canRetry) showRetryButton();
+});
+
+// Retry attempt
+provider.addEventListener('kc-retry', (e) => {
+  const { attempt, maxAttempts, delay } = e.detail;
+  console.log(`Retry ${attempt}/${maxAttempts} in ${delay}ms`);
+});
+
+// State change
+provider.addEventListener('kc-state-change', (e) => {
+  const { previous, current } = e.detail;
+  console.log('Auth state changed', current);
+});
+```
+
+Or use callbacks:
+
+```ts
+provider.onError = (error) => {
+  console.error(error.userMessage);
+};
+
+provider.onRetry = ({ attempt, maxAttempts }) => {
+  console.log(`Retrying ${attempt}/${maxAttempts}`);
+};
+```
+
+### Error Display Components
+
+#### Web Components
+
+```html
+<kc-provider url="..." realm="..." client-id="...">
+  <kc-loading message="Authenticating..."></kc-loading>
+  <kc-error-display show-retry></kc-error-display>
+  <kc-render-authenticated>
+    <!-- Your app -->
+  </kc-render-authenticated>
+</kc-provider>
+```
+
+`<kc-error-display>` automatically shows errors from the auth context with:
+- User-friendly error messages
+- Suggested recovery actions
+- Retry button (if recoverable)
+- Technical details toggle
+
+`<kc-loading>` shows a spinner during initialization and retries.
+
+#### React
+
+Display authentication errors from the auth context:
+
+```tsx
+import { ErrorDisplay } from "keycloak-headless/react";
+
+function App() {
+  const { error } = useAuth();
+  const providerRef = useRef<HTMLElement>();
+
+  return (
+    <>
+      {error && (
+        <ErrorDisplay
+          error={error}
+          onRetry={() => providerRef.current?.retry()}
+        />
+      )}
+      <YourApp />
+    </>
+  );
+}
+```
+
+**ErrorBoundary** (Optional) - Use if you want to catch Keycloak errors thrown during render:
+
+The provided `ErrorBoundary` is optional and designed for specific use cases:
+
+1. **Wrap KeycloakProvider** to catch initialization errors:
+```tsx
+import { ErrorBoundary } from "keycloak-headless/react";
+
+<ErrorBoundary onError={(error) => logToService(error)}>
+  <KeycloakProvider url="..." realm="..." clientId="...">
+    <App />
+  </KeycloakProvider>
+</ErrorBoundary>
+```
+
+2. **Use with your existing error boundary** - The library exports `KeycloakError` types that your error boundary can handle:
+```tsx
+// Your existing error boundary
+class AppErrorBoundary extends React.Component {
+  componentDidCatch(error: Error) {
+    if (error instanceof KeycloakError) {
+      // Handle Keycloak-specific errors
+      console.log(error.userMessage, error.suggestedAction);
+    }
+    // Handle other errors...
+  }
+}
+```
+
+3. **Custom fallback UI**:
+```tsx
+<ErrorBoundary
+  fallback={(error, reset) => (
+    <div>
+      <h1>{error.userMessage}</h1>
+      <p>{error.suggestedAction}</p>
+      <button onClick={reset}>Try Again</button>
+    </div>
+  )}
+>
+  <KeycloakProvider>...</KeycloakProvider>
+</ErrorBoundary>
+```
+
+**Note**: Most apps should handle auth errors via the `error` property in `useAuth()` rather than error boundaries. The `ErrorBoundary` is provided for convenience but is entirely optional.
+
+### Manual Retry
+
+Programmatically retry initialization:
+
+```ts
+const provider = document.querySelector('kc-provider');
+await provider.retry();
+```
+
+React:
+
+```tsx
+const providerRef = useRef<HTMLElement>();
+// Later:
+await providerRef.current?.retry();
+```
+
+### Error Logging
+
+Configure custom error logging:
+
+```ts
+import {
+  ConsoleErrorLogger,
+  MemoryErrorLogger,
+  RemoteErrorLogger,
+  CompositeErrorLogger
+} from "keycloak-headless";
+
+// Console logger (default)
+const consoleLogger = new ConsoleErrorLogger(100); // max 100 entries
+
+// Memory logger (for testing)
+const memoryLogger = new MemoryErrorLogger(50);
+
+// Remote logger (sends to endpoint)
+const remoteLogger = new RemoteErrorLogger('https://api.example.com/errors', {
+  batchSize: 10,
+  flushInterval: 30000, // 30 seconds
+});
+
+// Composite logger (multiple destinations)
+const logger = new CompositeErrorLogger([
+  consoleLogger,
+  remoteLogger,
+]);
+
+// Set on provider
+provider.errorLogger = logger;
+
+// Get logged errors
+const errors = logger.getErrors();
+```
+
+### Error Recovery Patterns
+
+**Network Errors** - Automatically retried with exponential backoff.
+
+**Configuration Errors** - Not retried (require code changes).
+
+**Token Refresh Failures** - User should re-authenticate:
+
+```ts
+provider.addEventListener('auth-refresh-error', () => {
+  // Show login prompt
+  provider.keycloak?.login();
+});
+```
+
+**Session Expired** - Redirect to login:
+
+```ts
+provider.addEventListener('token-expired', () => {
+  if (!provider.keycloak?.authenticated) {
+    provider.keycloak?.login();
+  }
+});
 ```
 
 ## API Reference

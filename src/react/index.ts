@@ -10,3 +10,21 @@ export {
   createRealmRoleChecker,
   createRoleCheckerFromConfig,
 } from "../roles/create-role-checker.js";
+
+// Error handling components
+export { ErrorDisplay } from "./error-display.js";
+export type { ErrorDisplayProps } from "./error-display.js";
+export { ErrorBoundary } from "./error-boundary.js";
+export type { ErrorBoundaryProps, ErrorBoundaryState } from "./error-boundary.js";
+
+// Re-export error types for convenience
+export {
+  KeycloakError,
+  KeycloakInitError,
+  KeycloakAuthError,
+  KeycloakTokenError,
+  KeycloakConfigError,
+  KeycloakNetworkError,
+  ErrorCodes,
+  type ErrorCode,
+} from "../errors/keycloak-errors.js";

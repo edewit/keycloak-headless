@@ -1,0 +1,25 @@
+{
+  "name": "keycloak-headless-role-created",
+  "version": "0.0.1",
+  "description": "Keycloak event listener: export realm/client roles to JSON on role create",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keycloak/keycloak-headless.git",
+    "directory": "providers/role-created-event-listener"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "README.md",
+    "target/role-created-event-listener.jar"
+  ],
+  "exports": {
+    "./jar": "./target/role-created-event-listener.jar"
+  },
+  "scripts": {
+    "build": "mvn -q clean package",
+    "prepublishOnly": "npm run build"
+  }
+}

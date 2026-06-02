@@ -238,7 +238,9 @@ pnpm example:vue
 
 ## Keycloak server provider
 
-The [`providers/role-created-event-listener`](providers/role-created-event-listener/) Maven module is an optional Keycloak extension that listens for realm and client role creation admin events. Build the JAR, copy it to Keycloak’s `providers/` directory, run `kc.sh build`, and add the listener id `headless-role-created` on your realm. See that module’s README for details.
+The optional [`headless-role-created`](providers/role-created-event-listener/) listener exports realm and client roles to `{realm}-roles.json` when roles are created via the Admin API. For local development, install the npm package **`keycloak-headless-role-created`** (pre-built JAR) and pass it to [`keycloak-runner`](https://www.npmjs.com/package/keycloak-runner) with `-p`, as in [`example/react/package.json`](example/react/package.json).
+
+This will ensure that the roles are typechecked when you are creating your project.
 
 ## License
 

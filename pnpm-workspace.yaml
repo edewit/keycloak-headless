@@ -2,6 +2,7 @@ packages:
   - "."
   - "example/react"
   - "example/vue"
+  - "providers/role-created-event-listener"
 
 allowBuilds:
   b: true

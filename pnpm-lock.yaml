@@ -81,6 +81,9 @@ importers:
       keycloak-headless:
         specifier: workspace:*
         version: link:../..
+      keycloak-headless-role-created:
+        specifier: workspace:*
+        version: link:../../providers/role-created-event-listener
       keycloak-onboarding-ui:
         specifier: 0.0.1-preview.0
         version: 0.0.1-preview.0(typescript@5.8.3)
@@ -131,6 +134,8 @@ importers:
       vite:
         specifier: ^6.3.3
         version: 6.4.2(@types/node@22.19.19)
+
+  providers/role-created-event-listener: {}
 
 packages:
 

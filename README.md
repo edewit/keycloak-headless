@@ -222,6 +222,421 @@ function message(err: unknown): string {
 }
 ```
 
+## API Reference
+
+### Web Components
+
+#### `<kc-provider>`
+Main provider component that initializes Keycloak and provides auth context.
+
+**Required Attributes:**
+- `url` - Keycloak server URL
+- `realm` - Realm name
+- `client-id` - Client ID
+
+**Optional Attributes:**
+- `on-load` - `"check-sso"` (default) or `"login-required"`
+- `scope` - OAuth scopes (space-separated)
+- `pkce-method` - `"S256"` (recommended) or `"false"`
+- See [full list above](#web-components)
+
+**Example:**
+```html
+<kc-provider url="https://keycloak.example.com/" realm="myrealm" client-id="my-spa">
+  <!-- Your app content -->
+</kc-provider>
+```
+
+#### `<kc-login-button>`
+Renders slot content when user can log in. Click triggers login.
+
+**Example:**
+```html
+<kc-login-button>
+  <button>Login</button>
+</kc-login-button>
+```
+
+#### `<kc-logout-button>`
+Renders slot content when authenticated. Click triggers logout.
+
+**Example:**
+```html
+<kc-logout-button>
+  <button>Logout</button>
+</kc-logout-button>
+```
+
+#### `<kc-account-link>`
+Opens Keycloak Account Console when clicked.
+
+**Optional Attributes:**
+- `redirect-uri` - URI to return to after leaving Account Console
+
+**Example:**
+```html
+<kc-account-link redirect-uri="https://myapp.com/profile">
+  <a href="#">My Account</a>
+</kc-account-link>
+```
+
+#### `<kc-render-authenticated>`
+Conditionally renders content only when authenticated.
+
+**Example:**
+```html
+<kc-render-authenticated>
+  <p>Welcome back!</p>
+</kc-render-authenticated>
+```
+
+#### `<kc-render-guest>`
+Conditionally renders content only when NOT authenticated.
+
+**Example:**
+```html
+<kc-render-guest>
+  <p>Please log in</p>
+</kc-render-guest>
+```
+
+#### `<kc-render-roles>`
+Conditionally renders based on user roles.
+
+**Attributes:**
+- `roles` - Comma-separated role names (e.g., `"admin,editor"`)
+- `match` - `"any"` (default, OR logic) or `"all"` (AND logic)
+- `role-kind` - `"realm"` (default) or `"client"`
+- `resource` - Client ID (required for client roles)
+
+**Examples:**
+```html
+<!-- Realm role - single -->
+<kc-render-roles roles="admin">
+  <button>Admin Panel</button>
+</kc-render-roles>
+
+<!-- Multiple roles - any match -->
+<kc-render-roles roles="admin,moderator" match="any">
+  <div>Admin or Moderator content</div>
+</kc-render-roles>
+
+<!-- Client roles -->
+<kc-render-roles roles="manage-users" role-kind="client" resource="my-client">
+  <div>User Management</div>
+</kc-render-roles>
+```
+
+### React API
+
+#### `KeycloakProvider`
+React wrapper for `<kc-provider>`.
+
+**Props:** Same as `<kc-provider>` attributes (camelCase)
+
+**Example:**
+```tsx
+<KeycloakProvider url="..." realm="..." clientId="...">
+  <App />
+</KeycloakProvider>
+```
+
+#### `useAuth()`
+Hook to access authentication state.
+
+**Returns:** `AuthState` object with:
+- `keycloak` - Keycloak instance
+- `authenticated` - boolean or undefined
+- `error` - Error if any
+
+**Example:**
+```tsx
+const { keycloak, authenticated, error } = useAuth();
+```
+
+#### `useRealmRoles(roles)`
+Type-safe realm role checking.
+
+**Parameters:**
+- `roles` - Array of role names (use `as const`)
+
+**Returns:** Object with `hasRealmRole(role)` function
+
+**Example:**
+```tsx
+const { hasRealmRole } = useRealmRoles(['admin', 'editor'] as const);
+if (hasRealmRole('admin')) { /* ... */ }
+```
+
+#### `useKeycloakConfigRoles(config)`
+Type-safe role checking with generated config.
+
+**Parameters:**
+- `config` - Generated `KEYCLOAK_CONFIG` object
+
+**Returns:** Object with `hasRealmRole(role)` and `hasClientRole(client, role)` functions
+
+**Example:**
+```tsx
+const { hasRealmRole, hasClientRole } = useKeycloakConfigRoles(KEYCLOAK_CONFIG);
+```
+
+### Vue API
+
+#### `useKeycloakAuth(hostRef)`
+Composable for accessing auth state.
+
+**Parameters:**
+- `hostRef` - Ref to an element inside `<kc-provider>`
+
+**Returns:** Ref to `AuthState`
+
+**Example:**
+```vue
+<script setup>
+const hostRef = ref(null);
+const auth = useKeycloakAuth(hostRef);
+</script>
+<template>
+  <div ref="hostRef">{{ auth.authenticated }}</div>
+</template>
+```
+
+#### `useKeycloakConfigRoles(auth, config)`
+Composable for type-safe role checking.
+
+**Parameters:**
+- `auth` - Auth state from `useKeycloakAuth`
+- `config` - Generated `KEYCLOAK_CONFIG`
+
+**Returns:** Computed ref with role checker functions
+
+### Svelte API
+
+#### `useKeycloakAuth(getHost)`
+Store factory for auth state.
+
+**Parameters:**
+- `getHost` - Function returning host element
+
+**Returns:** Readable store with `AuthState`
+
+**Example:**
+```svelte
+<script>
+let host;
+const auth = useKeycloakAuth(() => host ?? null);
+</script>
+<div bind:this={host}>{$auth.authenticated}</div>
+```
+
+### Solid API
+
+#### `useKeycloakAuth(getHost)`
+Signal-based auth state accessor.
+
+**Parameters:**
+- `getHost` - Function returning host element
+
+**Returns:** Accessor function returning `AuthState`
+
+**Example:**
+```tsx
+let host;
+const auth = useKeycloakAuth(() => host ?? null);
+return <div ref={host}>{auth().authenticated}</div>;
+```
+
+### Vite Plugin
+
+#### `keycloakRolesPlugin(options)`
+Generates typed config from Keycloak roles export.
+
+**Options:**
+- `input` - Path to `{realm}-roles.json` file
+- `output` - Path for generated TypeScript file
+
+**Example:**
+```ts
+// vite.config.ts
+import { keycloakRolesPlugin } from 'keycloak-headless/vite';
+
+export default defineConfig({
+  plugins: [
+    keycloakRolesPlugin({
+      input: '/tmp/keycloak-role-exports/master-roles.json',
+      output: 'src/keycloak-config.generated.ts',
+    }),
+  ],
+});
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### "Keycloak init failed" Error
+
+**Symptoms**: Console error on page load, authentication doesn't start
+
+**Causes**:
+1. Incorrect Keycloak server URL
+2. Realm or client-id doesn't exist
+3. CORS not configured in Keycloak
+4. Network connectivity issues
+
+**Solutions**:
+- Verify URL format includes `/auth/` suffix for older Keycloak versions (pre-17), or just base URL for Keycloak 17+
+- Check realm and client exist in Keycloak Admin Console
+- Add your app's origin to "Web Origins" in client settings (e.g., `http://localhost:5173` for dev)
+- Check browser DevTools Network tab for failed requests
+- Ensure client is set to "Public" access type for SPAs
+
+#### Infinite Redirect Loop
+
+**Symptoms**: Page keeps redirecting to Keycloak and back
+
+**Causes**:
+1. `redirect-uri` mismatch
+2. Invalid client configuration
+3. Session cookie issues
+
+**Solutions**:
+- Ensure "Valid Redirect URIs" in Keycloak matches your app URL exactly (including protocol and port)
+- Use `on-load="check-sso"` instead of `"login-required"` for SPAs to avoid forced redirects
+- Clear browser cookies and try again
+- Check for `redirectUri` typos in configuration
+- Verify "Valid Post Logout Redirect URIs" is also configured
+
+#### Roles Not Working
+
+**Symptoms**: `<kc-render-roles>` doesn't show content despite having roles
+
+**Causes**:
+1. Role not assigned to user
+2. Wrong `role-kind` (realm vs client)
+3. Incorrect `resource` for client roles
+4. Token not refreshed after role changes
+
+**Solutions**:
+- Verify role assignment in Keycloak Admin Console under Users → Role Mapping
+- Use `role-kind="realm"` for realm roles, `"client"` for client roles
+- For client roles, set `resource` to the exact client ID where the role is defined
+- Log out and log back in to get fresh token with new roles
+- Check token contents in browser DevTools → Application → Cookies or use jwt.io
+
+#### TypeScript Errors with Generated Config
+
+**Symptoms**: Type errors when using `KEYCLOAK_CONFIG`
+
+**Causes**:
+1. Generated file not created
+2. Vite plugin not running
+3. Stale generated file
+
+**Solutions**:
+- Ensure `keycloakRolesPlugin` is in `vite.config.ts` plugins array
+- Check that input JSON file exists and is valid
+- Delete generated file and restart dev server
+- Run `pnpm build` to regenerate types
+- Verify the JSON file path is correct (absolute or relative to project root)
+
+#### Token Refresh Failures
+
+**Symptoms**: User logged out unexpectedly, "Token refresh failed" errors
+
+**Causes**:
+1. Refresh token expired
+2. Session timeout in Keycloak
+3. Network issues during refresh
+
+**Solutions**:
+- Increase "SSO Session Idle" timeout in Keycloak realm settings (default is 30 minutes)
+- Increase "SSO Session Max" for longer sessions
+- Implement token refresh error handling in your app
+- Use `onAuthRefreshError` callback to prompt re-login
+- Consider implementing automatic token refresh before expiry
+
+#### Components Not Rendering
+
+**Symptoms**: Web components don't appear or show as unknown elements
+
+**Causes**:
+1. Forgot to import `keycloak-headless/provider`
+2. Import order issues
+3. Custom elements not supported
+
+**Solutions**:
+- Always import `keycloak-headless/provider` before using components
+- Import provider at the top of your entry file (e.g., `main.tsx`)
+- Check browser console for "Failed to execute 'define' on 'CustomElementRegistry'" errors
+- Verify browser supports Custom Elements (Chrome 90+, Firefox 88+, Safari 14+)
+
+#### CORS Errors
+
+**Symptoms**: Network requests blocked by CORS policy
+
+**Causes**:
+1. Web Origins not configured in Keycloak
+2. Incorrect origin format
+
+**Solutions**:
+- In Keycloak Admin Console, go to Clients → Your Client → Settings
+- Add your app's origin to "Web Origins" (e.g., `http://localhost:5173`, `https://myapp.com`)
+- Use `*` for development only (not recommended for production)
+- Ensure protocol (http/https) matches exactly
+- Check that Keycloak server is accessible from your network
+
+### Browser Compatibility
+
+- **Minimum**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- **Required**: ES2021 support, Custom Elements v1, Shadow DOM
+- **Polyfills**: Not provided - use modern browsers or add your own polyfills
+
+### Performance Tips
+
+1. **Lazy Load Components**: Import components only when needed
+   ```tsx
+   const AdminPanel = lazy(() => import('./AdminPanel'));
+   ```
+
+2. **Minimize Token Checks**: Cache role check results in components
+   ```tsx
+   const isAdmin = useMemo(() => hasRealmRole('admin'), [hasRealmRole]);
+   ```
+
+3. **Use `check-sso`**: Avoid forced login on every page load
+   ```html
+   <kc-provider on-load="check-sso" ...>
+   ```
+
+4. **Enable Token Refresh**: Set appropriate session timeouts in Keycloak
+   - SSO Session Idle: 30 minutes (default)
+   - SSO Session Max: 10 hours (adjust based on security requirements)
+
+5. **Optimize Bundle Size**: Import only what you need
+   ```tsx
+   // Good: Import specific hooks
+   import { useAuth } from 'keycloak-headless/react';
+   
+   // Avoid: Importing everything
+   import * as Keycloak from 'keycloak-headless/react';
+   ```
+
+### Getting Help
+
+- **GitHub Issues**: [https://github.com/keycloak/keycloak-headless/issues](https://github.com/keycloak/keycloak-headless/issues)
+- **Discussions**: [https://github.com/keycloak/keycloak-headless/discussions](https://github.com/keycloak/keycloak-headless/discussions)
+- **Keycloak Docs**: [https://www.keycloak.org/docs/latest/](https://www.keycloak.org/docs/latest/)
+- **Keycloak Discourse**: [https://keycloak.discourse.group/](https://keycloak.discourse.group/)
+
+When reporting issues, please include:
+- Keycloak version
+- Browser and version
+- Framework and version (React, Vue, etc.)
+- Minimal reproduction code
+- Console errors and network logs
+
 ## Development
 
 Requirements: Node.js 18+, pnpm.

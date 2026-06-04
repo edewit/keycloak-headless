@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "run-keycloak": "keycloak-runner -p node_modules/keycloak-headless-role-created/target/role-created-event-listener.jar --realm master --patch '{ \"adminEventsEnabled\": true, \"eventsListeners\": [\"headless-role-created\"] }' -- --spi-events-listener--headless-role-created--export-directory=/tmp/keycloak-role-exports"
+    "run-keycloak": "keycloak-runner -p node_modules/keycloak-headless-role-created/target/role-created-event-listener.jar --realm master --patch '{ \"adminEventsEnabled\": true, \"eventsListeners\": [\"headless-role-created\"] }' -- --spi-events-listener--headless-role-created--export-directory=/tmp/keycloak-role-exports",
+    "fetch-roles": "fetch-keycloak-roles --url http://localhost:8080 --realm master --username admin --password admin --output /tmp/keycloak-role-exports/master-roles.json"
   },
   "dependencies": {
     "@lit/context": "^1.1.6",

@@ -43,6 +43,10 @@ export default defineConfig({
           __dirname,
           "src/components/provider/index.ts",
         ),
+        "cli/fetch-keycloak-roles": resolve(
+          __dirname,
+          "src/cli/fetch-keycloak-roles.ts",
+        ),
         ...getComponentEntries("src/components"),
       },
       formats: ["es"],
@@ -52,6 +56,7 @@ export default defineConfig({
         "vite",
         "node:fs",
         "node:path",
+        "commander",
         "lit",
         "lit/decorators.js",
         "lit/directives/class-map.js",

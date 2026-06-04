@@ -36,6 +36,9 @@
       "import": "./dist/vite/index.js"
     }
   },
+  "bin": {
+    "fetch-keycloak-roles": "./dist/cli/fetch-keycloak-roles.js"
+  },
   "files": [
     "dist"
   ],
@@ -49,7 +52,8 @@
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "example:react": "pnpm --filter example-react dev",
-    "example:vue": "pnpm --filter example-vue dev"
+    "example:vue": "pnpm --filter example-vue dev",
+    "fetch-roles": "tsx src/cli/fetch-keycloak-roles.ts"
   },
   "keywords": [
     "keycloak",
@@ -77,6 +81,7 @@
     "react-dom": "^19.2.6",
     "solid-js": "^1.9.12",
     "svelte": "^5.55.5",
+    "tsx": "^4.22.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.3",
     "vite": "^6.4.2",
@@ -87,6 +92,7 @@
   "dependencies": {
     "@lit/context": "^1.1.6",
     "@lit/react": "^1.0.8",
+    "commander": "^15.0.0",
     "keycloak-js": "^26.2.4",
     "lit": "^3.3.2"
   },

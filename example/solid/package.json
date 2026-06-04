@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "run-keycloak": "keycloak-runner -p node_modules/keycloak-onboarding-ui/target/keycloak-onboarding-ui-theme.jar -p node_modules/keycloak-headless-role-created/target/role-created-event-listener.jar --realm master --patch '{ \"adminTheme\": \"keycloak-onboarding-ui\" }' -- --spi-events-listener--headless-role-created--export-directory=/tmp/keycloak-role-exports"
+    "run-keycloak": "keycloak-runner -p node_modules/keycloak-onboarding-ui/target/keycloak-onboarding-ui-theme.jar -p node_modules/keycloak-headless-role-created/target/role-created-event-listener.jar --realm master --patch '{ \"adminTheme\": \"keycloak-onboarding-ui\", \"adminEventsEnabled\": true, \"eventsListeners\": [\"headless-role-created\"] }' -- --spi-events-listener--headless-role-created--export-directory=/tmp/keycloak-role-exports"
   },
   "dependencies": {
     "keycloak-headless": "workspace:*",

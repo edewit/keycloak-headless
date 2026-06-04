@@ -8,7 +8,7 @@ import { keycloakRolesPlugin } from "../../src/vite/keycloak-roles-plugin.ts";
 const rootDir = fileURLToPath(new URL("../..", import.meta.url));
 const rolesExport =
   process.env.KEYCLOAK_ROLES_EXPORT ??
-  resolve(rootDir, "scripts/fixtures/master-roles.json");
+  "/tmp/keycloak-role-exports/master-roles.json";
 
 export default defineConfig({
   plugins: [

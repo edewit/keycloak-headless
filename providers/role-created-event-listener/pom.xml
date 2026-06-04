@@ -6,7 +6,7 @@
 
     <groupId>dev.keycloak.headless</groupId>
     <artifactId>role-created-event-listener</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
     <packaging>jar</packaging>
 
     <name>Keycloak Headless - Role Created Event Listener</name>
@@ -54,6 +54,7 @@
     </dependencies>
 
     <build>
+        <finalName>role-created-event-listener</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

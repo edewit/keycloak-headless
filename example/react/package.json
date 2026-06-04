@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview",
+    "run-keycloak": "keycloak-runner -p node_modules/keycloak-headless-role-created/target/role-created-event-listener.jar --realm master --patch '{ \"adminEventsEnabled\": true, \"eventsListeners\": [\"headless-role-created\"] }' -- --spi-events-listener--headless-role-created--export-directory=/tmp/keycloak-role-exports"
   },
   "dependencies": {
     "keycloak-headless": "workspace:*",
@@ -17,6 +19,8 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
+    "keycloak-headless-role-created": "workspace:*",
+    "keycloak-runner": "0.0.1-alpha.2",
     "typescript": "~5.8.3",
     "vite": "^6.3.3"
   }

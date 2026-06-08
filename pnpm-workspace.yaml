@@ -2,6 +2,8 @@ packages:
   - "."
   - "example/react"
   - "example/vue"
+  - "example/solid"
+  - "example/svelte"
   - "providers/role-created-event-listener"
 
 allowBuilds:

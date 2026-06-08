@@ -10,6 +10,51 @@ pnpm add keycloak-headless
 npm install keycloak-headless
 ```
 
+## Quick start
+
+Scaffold a new Vite SPA wired up with `keycloak-headless`, typed realm roles, and framework helpers:
+
+```bash
+npx create-keycloak-headless
+```
+
+The CLI asks which framework you want (React, Vue, Solid, or Svelte), then creates a project from the bundled templates. It also **automatically**:
+
+1. Installs project dependencies
+2. Starts local Keycloak via `keycloak-runner` (or reuses an existing instance on port 8080)
+3. Creates the public SPA client in Keycloak
+
+Requirements: **Java 17+**, free port **8080**, and network on first run (Keycloak is downloaded). Default admin credentials are `admin` / `admin`.
+
+**Non-interactive usage:**
+
+```bash
+npx create-keycloak-headless \
+  --framework react \
+  --name my-keycloak-app \
+  --url http://localhost:8080/ \
+  --realm master \
+  --client-id example-spa \
+  --yes
+```
+
+**After scaffolding:**
+
+```bash
+cd my-keycloak-app
+pnpm dev
+```
+
+Each scaffolded project includes a starter `keycloak-roles.json` fixture so `keycloakRolesPlugin` can generate typed roles on the first dev or build run. After you add custom roles in Keycloak, run `pnpm fetch-roles` to sync typed role definitions.
+
+If Keycloak bootstrap fails, the project is still created — run `pnpm run-keycloak` manually and retry.
+
+When developing this repository:
+
+```bash
+pnpm create-app
+```
+
 ## Entry points
 
 | Import | Purpose |
@@ -910,6 +955,9 @@ pnpm lint         # ESLint
 pnpm typecheck    # tsc --noEmit
 pnpm example:react
 pnpm example:vue
+pnpm example:solid
+pnpm example:svelte
+pnpm create-app
 ```
 
 ## Keycloak server provider

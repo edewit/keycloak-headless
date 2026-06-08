@@ -1,6 +1,6 @@
 {
   "name": "keycloak-headless-role-created",
-  "version": "0.0.1",
+  "version": "0.1.0-alpha.0",
   "description": "Keycloak event listener: export realm/client roles to JSON on role create",
   "license": "Apache-2.0",
   "repository": {

@@ -37,10 +37,12 @@
     }
   },
   "bin": {
-    "fetch-keycloak-roles": "./dist/cli/fetch-keycloak-roles.js"
+    "fetch-keycloak-roles": "./dist/cli/fetch-keycloak-roles.js",
+    "create-keycloak-headless": "./dist/cli/create-keycloak-headless.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "templates"
   ],
   "scripts": {
     "dev": "vite",
@@ -53,7 +55,10 @@
     "typecheck": "tsc --noEmit",
     "example:react": "pnpm --filter example-react dev",
     "example:vue": "pnpm --filter example-vue dev",
-    "fetch-roles": "tsx src/cli/fetch-keycloak-roles.ts"
+    "example:solid": "pnpm --filter example-solid dev",
+    "example:svelte": "pnpm --filter example-svelte dev",
+    "fetch-roles": "tsx src/cli/fetch-keycloak-roles.ts",
+    "create-app": "tsx src/cli/create-keycloak-headless.ts"
   },
   "keywords": [
     "keycloak",
@@ -90,6 +95,8 @@
     "vue": "^3.5.34"
   },
   "dependencies": {
+    "@inquirer/prompts": "^7.5.3",
+    "@keycloak/keycloak-admin-client": "^26.6.3",
     "@lit/context": "^1.1.6",
     "@lit/react": "^1.0.8",
     "commander": "^15.0.0",

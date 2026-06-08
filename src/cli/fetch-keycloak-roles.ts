@@ -2,104 +2,17 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Command } from "commander";
+import { NetworkError } from "@keycloak/keycloak-admin-client";
 import type {
   RealmRolesExport,
   RoleRepresentation,
 } from "../types/realm-roles-export.js";
+import {
+  authenticateAdminClient,
+  normalizeKeycloakBaseUrl,
+} from "./keycloak-admin.js";
 
-interface KeycloakTokenResponse {
-  access_token: string;
-  expires_in: number;
-  refresh_expires_in: number;
-  token_type: string;
-}
-
-interface KeycloakClientRepresentation {
-  id: string;
-  clientId: string;
-  name?: string;
-  enabled?: boolean;
-}
-
-class KeycloakAdminClient {
-  private accessToken: string | null = null;
-
-  constructor(
-    private url: string,
-    private realm: string,
-    private username: string,
-    private password: string,
-  ) {}
-
-  private async authenticate(): Promise<void> {
-    const tokenUrl = `${this.url}/realms/${this.realm}/protocol/openid-connect/token`;
-    const params = new URLSearchParams({
-      grant_type: "password",
-      client_id: "admin-cli",
-      username: this.username,
-      password: this.password,
-    });
-
-    const response = await fetch(tokenUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(
-        `Authentication failed: ${response.status} ${response.statusText}\n${error}`,
-      );
-    }
-
-    const data = (await response.json()) as KeycloakTokenResponse;
-    this.accessToken = data.access_token;
-  }
-
-  private async request<T>(path: string): Promise<T> {
-    if (!this.accessToken) {
-      await this.authenticate();
-    }
-
-    const url = `${this.url}/admin/realms/${this.realm}${path}`;
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(
-        `API request failed: ${response.status} ${response.statusText}\n${error}`,
-      );
-    }
-
-    return response.json() as Promise<T>;
-  }
-
-  async getRealmRoles(): Promise<RoleRepresentation[]> {
-    return this.request<RoleRepresentation[]>("/roles");
-  }
-
-  async getClients(): Promise<KeycloakClientRepresentation[]> {
-    return this.request<KeycloakClientRepresentation[]>("/clients");
-  }
-
-  async getClientRoles(clientId: string): Promise<RoleRepresentation[]> {
-    return this.request<RoleRepresentation[]>(`/clients/${clientId}/roles`);
-  }
-
-  async getRealmInfo(): Promise<{ id: string; realm: string }> {
-    return this.request<{ id: string; realm: string }>("");
-  }
-}
-
-async function fetchKeycloakRoles(options: {
+export async function fetchKeycloakRoles(options: {
   url: string;
   realm: string;
   username: string;
@@ -107,37 +20,43 @@ async function fetchKeycloakRoles(options: {
   output: string;
   clientFilter?: string;
 }): Promise<void> {
-  console.log(`Connecting to Keycloak at ${options.url}...`);
+  const baseUrl = normalizeKeycloakBaseUrl(options.url);
+  console.log(`Connecting to Keycloak at ${baseUrl}...`);
   console.log(`Realm: ${options.realm}`);
   console.log(`Username: ${options.username}`);
 
-  const client = new KeycloakAdminClient(
-    options.url,
-    options.realm,
-    options.username,
-    options.password,
-  );
-
   try {
-    // Fetch realm info
-    console.log("\nFetching realm information...");
-    const realmInfo = await client.getRealmInfo();
+    const client = await authenticateAdminClient({
+      baseUrl,
+      realm: options.realm,
+      credentials: {
+        username: options.username,
+        password: options.password,
+      },
+    });
 
-    // Fetch realm roles
+    console.log("\nFetching realm information...");
+    const realmInfo = await client.realms.findOne({ realm: options.realm });
+    if (!realmInfo?.id || !realmInfo.realm) {
+      throw new Error(`Could not find realm "${options.realm}"`);
+    }
+
     console.log("Fetching realm roles...");
-    const realmRoles = await client.getRealmRoles();
+    const realmRoles = await client.roles.find();
     console.log(`Found ${realmRoles.length} realm roles`);
 
-    // Fetch clients and their roles
     console.log("\nFetching clients...");
-    const clients = await client.getClients();
+    const clients = await client.clients.find();
     console.log(`Found ${clients.length} clients`);
 
     const clientRoles: Record<string, RoleRepresentation[]> = {};
     let processedClients = 0;
 
     for (const clientRep of clients) {
-      // Skip if client filter is specified and doesn't match
+      if (!clientRep.id || !clientRep.clientId) {
+        continue;
+      }
+
       if (
         options.clientFilter &&
         !clientRep.clientId.includes(options.clientFilter)
@@ -146,7 +65,7 @@ async function fetchKeycloakRoles(options: {
       }
 
       try {
-        const roles = await client.getClientRoles(clientRep.id);
+        const roles = await client.clients.listRoles({ id: clientRep.id });
         if (roles.length > 0) {
           clientRoles[clientRep.clientId] = roles;
           console.log(
@@ -155,7 +74,6 @@ async function fetchKeycloakRoles(options: {
           processedClients++;
         }
       } catch {
-        // Some clients may not have roles or may not be accessible
         console.warn(
           `  Warning: Could not fetch roles for client ${clientRep.clientId}`,
         );
@@ -166,7 +84,6 @@ async function fetchKeycloakRoles(options: {
       `\nProcessed ${processedClients} client${processedClients !== 1 ? "s" : ""} with roles`,
     );
 
-    // Build export document
     const exportDoc: RealmRolesExport = {
       realm: realmInfo.realm,
       realmId: realmInfo.id,
@@ -177,12 +94,10 @@ async function fetchKeycloakRoles(options: {
       },
     };
 
-    // Write to file
     const outputPath = resolve(options.output);
     writeFileSync(outputPath, JSON.stringify(exportDoc, null, 2), "utf8");
     console.log(`\n✓ Roles exported to: ${outputPath}`);
 
-    // Summary
     console.log("\nSummary:");
     console.log(`  Realm roles: ${realmRoles.length}`);
     console.log(`  Clients with roles: ${Object.keys(clientRoles).length}`);
@@ -192,7 +107,14 @@ async function fetchKeycloakRoles(options: {
     );
     console.log(`  Total client roles: ${totalClientRoles}`);
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof NetworkError) {
+      console.error(
+        `\n✗ Error: ${error.response.status} ${error.response.statusText}`,
+      );
+      if (error.responseData) {
+        console.error(JSON.stringify(error.responseData, null, 2));
+      }
+    } else if (error instanceof Error) {
       console.error(`\n✗ Error: ${error.message}`);
     } else {
       console.error(`\n✗ Unknown error:`, error);
@@ -201,12 +123,13 @@ async function fetchKeycloakRoles(options: {
   }
 }
 
-// CLI setup
 const program = new Command();
 
 program
   .name("fetch-keycloak-roles")
-  .description("Fetch roles from a Keycloak realm and generate TypeScript types")
+  .description(
+    "Fetch roles from a Keycloak realm and generate TypeScript types",
+  )
   .version("1.0.0")
   .requiredOption(
     "-u, --url <url>",
@@ -238,5 +161,3 @@ program
   });
 
 program.parse();
-
-// Made with Bob

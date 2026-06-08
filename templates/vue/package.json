@@ -1,0 +1,25 @@
+{
+  "name": "__PROJECT_NAME__",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview",
+    "run-keycloak": "keycloak-runner -p node_modules/keycloak-headless-role-created/target/role-created-event-listener.jar --realm __KEYCLOAK_REALM__ --patch '{ \"adminEventsEnabled\": true, \"eventsListeners\": [\"headless-role-created\"] }' -- --spi-events-listener--headless-role-created--export-directory=.",
+    "fetch-roles": "fetch-keycloak-roles --url http://localhost:8080 --realm __KEYCLOAK_REALM__ --username admin --password admin --output ./keycloak-roles.json"
+  },
+  "dependencies": {
+    "keycloak-headless": "^__KEYCLOAK_HEADLESS_VERSION__",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.3",
+    "keycloak-headless-role-created": "^__KEYCLOAK_ROLE_CREATED_VERSION__",
+    "keycloak-runner": "0.0.1-alpha.2",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.3"
+  }
+}

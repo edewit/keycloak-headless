@@ -143,7 +143,7 @@ function printNextSteps(projectName: string, keycloakBootstrapped: boolean): voi
 const program = new Command();
 
 program
-  .name("create-keycloak-headless")
+  .name("create")
   .description(
     "Scaffold a new Keycloak Headless SPA from framework templates",
   )

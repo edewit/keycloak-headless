@@ -15,7 +15,7 @@ npm install keycloak-headless
 Scaffold a new Vite SPA wired up with `keycloak-headless`, typed realm roles, and framework helpers:
 
 ```bash
-npx create-keycloak-headless
+npx keycloak-headless create
 ```
 
 The CLI asks which framework you want (React, Vue, Solid, or Svelte), then creates a project from the bundled templates. It also **automatically**:
@@ -29,7 +29,7 @@ Requirements: **Java 17+**, free port **8080**, and network on first run (Keyclo
 **Non-interactive usage:**
 
 ```bash
-npx create-keycloak-headless \
+npx keycloak-headless create \
   --framework react \
   --name my-keycloak-app \
   --url http://localhost:8080/ \

@@ -38,7 +38,7 @@
   },
   "bin": {
     "fetch-keycloak-roles": "./dist/cli/fetch-keycloak-roles.js",
-    "create-keycloak-headless": "./dist/cli/create-keycloak-headless.js"
+    "create": "./dist/cli/create.js"
   },
   "files": [
     "dist",
@@ -58,7 +58,7 @@
     "example:solid": "pnpm --filter example-solid dev",
     "example:svelte": "pnpm --filter example-svelte dev",
     "fetch-roles": "tsx src/cli/fetch-keycloak-roles.ts",
-    "create-app": "tsx src/cli/create-keycloak-headless.ts"
+    "create-app": "tsx src/cli/create.ts"
   },
   "keywords": [
     "keycloak",

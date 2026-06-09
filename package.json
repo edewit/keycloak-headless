@@ -1,6 +1,6 @@
 {
   "name": "keycloak-headless",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Keycloak headless component library built with Lit",
   "type": "module",
   "main": "./dist/index.js",

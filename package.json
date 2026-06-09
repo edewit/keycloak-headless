@@ -1,6 +1,6 @@
 {
   "name": "keycloak-headless",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Keycloak headless component library built with Lit",
   "type": "module",
   "main": "./dist/index.js",
@@ -43,7 +43,8 @@
   },
   "files": [
     "dist",
-    "templates"
+    "templates",
+    "providers/role-created-event-listener/package.json"
   ],
   "scripts": {
     "dev": "vite",

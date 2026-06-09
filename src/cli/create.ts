@@ -54,9 +54,9 @@ function readRoleCreatedVersion(packageRoot: string): string {
       string,
       string
     >;
-    return pkg.version ?? "0.0.1";
+    return pkg.version ?? "0.1.0-alpha.0";
   } catch {
-    return "0.0.1";
+    return "0.1.0-alpha.0";
   }
 }
 

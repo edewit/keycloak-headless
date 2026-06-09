@@ -40,12 +40,14 @@ describe("scaffoldProject", () => {
       keycloakRealm: "master",
       keycloakClientId: "example-spa",
       keycloakHeadlessVersion: "0.0.1",
-      keycloakRoleCreatedVersion: "0.0.1",
+      keycloakRoleCreatedVersion: "0.1.0-alpha.0",
       packageRoot,
     });
 
-    expect(readFileSync(join(targetDir, "package.json"), "utf8")).toContain(
-      '"keycloak-headless"',
+    const packageJson = readFileSync(join(targetDir, "package.json"), "utf8");
+    expect(packageJson).toContain('"keycloak-headless"');
+    expect(packageJson).toContain(
+      '"keycloak-headless-role-created": "^0.1.0-alpha.0"',
     );
     expect(readFileSync(join(targetDir, "vite.config.ts"), "utf8")).toContain(
       "keycloakRolesPlugin",
@@ -87,7 +89,7 @@ describe("scaffoldProject", () => {
       keycloakRealm: "master",
       keycloakClientId: "example-spa",
       keycloakHeadlessVersion: "0.0.1",
-      keycloakRoleCreatedVersion: "0.0.1",
+      keycloakRoleCreatedVersion: "0.1.0-alpha.0",
       packageRoot,
     });
 
@@ -100,7 +102,7 @@ describe("scaffoldProject", () => {
         keycloakRealm: "master",
         keycloakClientId: "example-spa",
         keycloakHeadlessVersion: "0.0.1",
-        keycloakRoleCreatedVersion: "0.0.1",
+        keycloakRoleCreatedVersion: "0.1.0-alpha.0",
         packageRoot,
       }),
     ).toThrow(/not empty/);

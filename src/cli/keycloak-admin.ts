@@ -30,27 +30,46 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function buildRealmUrl(baseUrl: string, realm: string): string {
+  return `${normalizeKeycloakBaseUrl(baseUrl)}/realms/${encodeURIComponent(realm)}`;
+}
+
+async function probeKeycloakUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: "GET" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function probeKeycloakUrls(urls: string[]): Promise<boolean> {
+  if (urls.length === 0) {
+    return false;
+  }
+
+  const results = await Promise.all(urls.map((url) => probeKeycloakUrl(url)));
+  return results.some(Boolean);
+}
+
+function buildReuseProbeUrls(baseUrl: string, realm: string): string[] {
+  const urls = new Set([buildRealmUrl(baseUrl, realm), buildRealmUrl(baseUrl, "master")]);
+  return [...urls];
+}
+
 export async function waitForKeycloak(
   baseUrl: string,
   realm: string,
   timeoutMs = DEFAULT_KEYCLOAK_TIMEOUT_MS,
 ): Promise<void> {
   const normalized = normalizeKeycloakBaseUrl(baseUrl);
+  const realmUrl = buildRealmUrl(normalized, realm);
   const started = Date.now();
   let attempt = 0;
-  const healthUrl = `${normalized}/health/ready`;
-  const realmUrl = `${normalized}/realms/${encodeURIComponent(realm)}`;
 
   while (Date.now() - started < timeoutMs) {
-    for (const url of [healthUrl, realmUrl]) {
-      try {
-        const res = await fetch(url, { method: "GET" });
-        if (res.ok) {
-          return;
-        }
-      } catch {
-        // retry
-      }
+    if (await probeKeycloakUrls([realmUrl])) {
+      return;
     }
 
     const backoff = Math.min(500 + attempt * 200, 3000);
@@ -67,12 +86,7 @@ export async function isKeycloakReady(
   baseUrl: string,
   realm: string,
 ): Promise<boolean> {
-  try {
-    await waitForKeycloak(baseUrl, realm, 1_000);
-    return true;
-  } catch {
-    return false;
-  }
+  return probeKeycloakUrls(buildReuseProbeUrls(baseUrl, realm));
 }
 
 export async function authenticateAdminClient(options: {

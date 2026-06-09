@@ -30,13 +30,60 @@ describe("keycloak-admin", () => {
     vi.unstubAllGlobals();
   });
 
-  it("waitForKeycloak resolves when health endpoint responds", async () => {
+  it("waitForKeycloak resolves when the target realm endpoint responds", async () => {
     vi.mocked(fetch).mockResolvedValue({ ok: true } as Response);
 
     const { waitForKeycloak } = await import("./keycloak-admin.js");
     await expect(
       waitForKeycloak("http://localhost:8080/", "master", 5_000),
     ).resolves.toBeUndefined();
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/realms/master",
+      { method: "GET" },
+    );
+  });
+
+  it("isKeycloakReady reuses an existing server when only master is available", async () => {
+    vi.mocked(fetch).mockImplementation(async (url) => {
+      if (String(url).endsWith("/realms/master")) {
+        return { ok: true } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
+    });
+
+    const { isKeycloakReady } = await import("./keycloak-admin.js");
+    await expect(
+      isKeycloakReady("http://localhost:8080/", "my-realm"),
+    ).resolves.toBe(true);
+  });
+
+  it("isKeycloakReady ignores /health/ready and checks realm endpoints in parallel", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockImplementation(async (url) => {
+      if (String(url).includes("/health/ready")) {
+        return { ok: false, status: 404 } as Response;
+      }
+      if (String(url).endsWith("/realms/my-realm")) {
+        return { ok: true } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
+    });
+
+    const { isKeycloakReady } = await import("./keycloak-admin.js");
+    await expect(
+      isKeycloakReady("http://localhost:8080/", "my-realm"),
+    ).resolves.toBe(true);
+
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/health/ready"))).toBe(
+      false,
+    );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/realms/my-realm"))).toBe(
+      true,
+    );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/realms/master"))).toBe(
+      true,
+    );
   });
 
   it("ensureSpaClient creates a client when missing", async () => {

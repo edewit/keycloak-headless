@@ -11,6 +11,7 @@ import {
   authenticateAdminClient,
   normalizeKeycloakBaseUrl,
 } from "./keycloak-admin.js";
+import { isCliMain } from "./run-if-main.js";
 
 export async function fetchKeycloakRoles(options: {
   url: string;
@@ -123,14 +124,13 @@ export async function fetchKeycloakRoles(options: {
   }
 }
 
-const program = new Command();
-
-program
-  .name("fetch-keycloak-roles")
+export function buildFetchKeycloakRolesCommand(
+  name = "fetch-keycloak-roles",
+): Command {
+  return new Command(name)
   .description(
     "Fetch roles from a Keycloak realm and generate TypeScript types",
   )
-  .version("1.0.0")
   .requiredOption(
     "-u, --url <url>",
     "Keycloak server URL",
@@ -159,5 +159,8 @@ program
   .action(async (options) => {
     await fetchKeycloakRoles(options);
   });
+}
 
-program.parse();
+if (isCliMain(import.meta.url)) {
+  buildFetchKeycloakRolesCommand().parse();
+}

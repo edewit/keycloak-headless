@@ -48,6 +48,10 @@ export default defineConfig({
           "src/cli/fetch-keycloak-roles.ts",
         ),
         "cli/create": resolve(__dirname, "src/cli/create.ts"),
+        "cli/keycloak-headless": resolve(
+          __dirname,
+          "src/cli/keycloak-headless.ts",
+        ),
         ...getComponentEntries("src/components"),
       },
       formats: ["es"],

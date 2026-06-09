@@ -14,6 +14,7 @@ import {
   getPackageRoot,
   scaffoldProject,
 } from "./scaffold-project.js";
+import { isCliMain } from "./run-if-main.js";
 
 const FRAMEWORKS: Framework[] = ["react", "vue", "solid", "svelte"];
 
@@ -140,14 +141,11 @@ function printNextSteps(projectName: string, keycloakBootstrapped: boolean): voi
   }
 }
 
-const program = new Command();
-
-program
-  .name("create")
+export function buildCreateCommand(): Command {
+  return new Command("create")
   .description(
     "Scaffold a new Keycloak Headless SPA from framework templates",
   )
-  .version("1.0.0")
   .option(
     "-f, --framework <framework>",
     `Framework (${FRAMEWORKS.join(", ")})`,
@@ -229,5 +227,8 @@ program
       process.exit(1);
     }
   });
+}
 
-program.parse();
+if (isCliMain(import.meta.url)) {
+  buildCreateCommand().parse();
+}

@@ -1,6 +1,6 @@
 {
   "name": "keycloak-headless",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Keycloak headless component library built with Lit",
   "type": "module",
   "main": "./dist/index.js",
@@ -37,6 +37,7 @@
     }
   },
   "bin": {
+    "keycloak-headless": "./dist/cli/keycloak-headless.js",
     "fetch-keycloak-roles": "./dist/cli/fetch-keycloak-roles.js",
     "create": "./dist/cli/create.js"
   },

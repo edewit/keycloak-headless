@@ -1,5 +1,4 @@
 import {
-  copyFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -105,7 +104,7 @@ function copyTemplateDirectory(
 export function scaffoldProject(options: ScaffoldOptions): void {
   const packageRoot = options.packageRoot ?? getPackageRoot(import.meta.url);
   const templateDir = join(packageRoot, "templates", options.framework);
-  const rolesFixture = join(packageRoot, "scripts", "fixtures", "master-roles.json");
+  const rolesFixture = join(packageRoot, "templates", "fixtures", "master-roles.json");
 
   if (!existsSync(templateDir)) {
     throw new Error(`Template not found for framework "${options.framework}".`);
@@ -119,5 +118,11 @@ export function scaffoldProject(options: ScaffoldOptions): void {
   mkdirSync(options.targetDir, { recursive: true });
 
   copyTemplateDirectory(templateDir, options.targetDir, options);
-  copyFileSync(rolesFixture, join(options.targetDir, "keycloak-roles.json"));
+
+  const rolesFixtureContent = readFileSync(rolesFixture, "utf8");
+  writeFileSync(
+    join(options.targetDir, "keycloak-roles.json"),
+    substitutePlaceholders(rolesFixtureContent, options),
+    "utf8",
+  );
 }

@@ -1,0 +1,18 @@
+{
+  "realm": "__KEYCLOAK_REALM__",
+  "realmId": "fixture-realm-id",
+  "exportedAt": 1710000000000,
+  "roles": {
+    "realm": [
+      { "id": "1", "name": "admin" },
+      { "id": "2", "name": "editor" },
+      { "id": "3", "name": "viewer" }
+    ],
+    "client": {
+      "__KEYCLOAK_CLIENT_ID__": [
+        { "id": "4", "name": "read" },
+        { "id": "5", "name": "write" }
+      ]
+    }
+  }
+}

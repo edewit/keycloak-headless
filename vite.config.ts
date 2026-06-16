@@ -1,6 +1,7 @@
-import { defineConfig } from "vite";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { defineConfig, type Plugin } from "vite";
 import { resolve } from "path";
-import { readdirSync, statSync } from "fs";
+import { copyFileSync, readdirSync, statSync } from "fs";
 import dts from "vite-plugin-dts";
 
 function getComponentEntries(dir: string): Record<string, string> {
@@ -23,12 +24,65 @@ function getComponentEntries(dir: string): Record<string, string> {
   return entries;
 }
 
+const externalPackages = new Set([
+  "vite",
+  "node:fs",
+  "node:path",
+  "node:url",
+  "node:os",
+  "node:child_process",
+  "@keycloak/keycloak-admin-client",
+  "@inquirer/prompts",
+  "commander",
+  "lit",
+  "lit/decorators.js",
+  "lit/directives/class-map.js",
+  "react",
+  "react/jsx-runtime",
+  "@lit/react",
+  "vue",
+  "svelte",
+  "svelte/store",
+  "solid-js",
+]);
+
+function isExternal(id: string): boolean {
+  if (externalPackages.has(id)) return true;
+  if (id.startsWith("svelte/")) return true;
+  if (id.includes("/svelte/src/internal/")) return true;
+  return false;
+}
+
+/** Map resolved Svelte internals to stable package subpath imports in dist. */
+function svelteInternalPath(id: string): string | undefined {
+  const match = id.match(/svelte\/src\/internal\/(.+)\.js$/);
+  if (!match) return undefined;
+  return `svelte/internal/${match[1]}.js`;
+}
+
+function copySvelteModuleTypes(): Plugin {
+  const src = resolve(__dirname, "src/svelte/use-keycloak-auth.svelte.d.ts");
+  const dest = resolve(__dirname, "dist/svelte/use-keycloak-auth.svelte.d.ts");
+  return {
+    name: "copy-svelte-module-types",
+    closeBundle() {
+      copyFileSync(src, dest);
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
+    svelte({
+      compilerOptions: {
+        runes: true,
+      },
+    }),
     dts({
       include: ["src"],
-      exclude: ["**/*.test.ts"],
+      exclude: ["**/*.test.ts", "**/*.svelte.ts"],
     }),
+    copySvelteModuleTypes(),
   ],
   build: {
     lib: {
@@ -57,32 +111,12 @@ export default defineConfig({
       formats: ["es"],
     },
     rollupOptions: {
-      external: [
-        "vite",
-        "node:fs",
-        "node:path",
-        "node:url",
-        "node:os",
-        "node:child_process",
-        "@keycloak/keycloak-admin-client",
-        "@inquirer/prompts",
-        "@keycloak/keycloak-admin-client",
-        "commander",
-        "lit",
-        "lit/decorators.js",
-        "lit/directives/class-map.js",
-        "react",
-        "react/jsx-runtime",
-        "@lit/react",
-        "vue",
-        "svelte",
-        "svelte/store",
-        "solid-js",
-      ],
+      external: isExternal,
       output: {
         preserveModules: true,
         preserveModulesRoot: "src",
         entryFileNames: "[name].js",
+        paths: (id) => svelteInternalPath(id) ?? id,
       },
     },
     sourcemap: true,

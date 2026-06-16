@@ -1,4 +1,3 @@
-import { afterUpdate, onDestroy } from "svelte";
 import { writable, type Readable } from "svelte/store";
 
 import type { AuthState } from "../components/provider/kc-context.js";
@@ -12,24 +11,17 @@ export function useKeycloakAuth(
   getHost: () => Element | null,
 ): Readable<AuthState> {
   const inner = writable<AuthState>({});
-  let cleanup: (() => void) | undefined;
-  let lastHost: Element | null = null;
 
-  afterUpdate(() => {
+  $effect(() => {
     const el = getHost();
-    if (el === lastHost) return;
-    cleanup?.();
-    cleanup = undefined;
-    lastHost = el;
     if (!el) {
       inner.set({});
       return;
     }
-    cleanup = subscribeAuthContext(el, (v) => inner.set(v));
-  });
-
-  onDestroy(() => {
-    cleanup?.();
+    const unsub = subscribeAuthContext(el, (v) => inner.set(v));
+    return () => {
+      unsub();
+    };
   });
 
   return { subscribe: inner.subscribe };

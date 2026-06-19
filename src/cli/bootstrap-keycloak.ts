@@ -1,8 +1,13 @@
 import {
   DEFAULT_KEYCLOAK_TIMEOUT_MS,
+  ensureRealm,
+  ensureRealmUser,
   ensureSpaClient,
   normalizeKeycloakBaseUrl,
   resolveAdminCredentials,
+  resolveRealmUserCredentials,
+  type RealmStatus,
+  type RealmUserStatus,
   type SpaClientStatus,
 } from "./keycloak-admin.js";
 import {
@@ -22,6 +27,8 @@ export interface BootstrapKeycloakOptions {
 
 export interface BootstrapKeycloakResult {
   ok: boolean;
+  realmStatus?: RealmStatus;
+  realmUserStatus?: RealmUserStatus;
   clientStatus?: SpaClientStatus;
   runner?: StartKeycloakRunnerResult;
   warning?: string;
@@ -52,8 +59,25 @@ export async function bootstrapKeycloak(
       timeoutMs,
     });
 
-    console.log(`Ensuring public SPA client "${options.clientId}" exists...`);
     const credentials = resolveAdminCredentials();
+
+    console.log(`Ensuring realm "${options.realm}" exists...`);
+    const realmStatus = await ensureRealm({
+      baseUrl,
+      realm: options.realm,
+      credentials,
+    });
+
+    const realmUser = resolveRealmUserCredentials();
+    console.log(`Ensuring realm user "${realmUser.username}" exists...`);
+    const realmUserStatus = await ensureRealmUser({
+      baseUrl,
+      realm: options.realm,
+      credentials,
+      user: realmUser,
+    });
+
+    console.log(`Ensuring public SPA client "${options.clientId}" exists...`);
     const clientStatus = await ensureSpaClient({
       baseUrl,
       realm: options.realm,
@@ -63,6 +87,8 @@ export async function bootstrapKeycloak(
 
     return {
       ok: true,
+      realmStatus,
+      realmUserStatus,
       clientStatus,
       runner,
     };
@@ -100,9 +126,15 @@ export function printBootstrapSummary(options: {
 
   console.log("\n✓ Keycloak bootstrap complete");
   console.log(`  Server: ${baseUrl}`);
-  console.log(`  Realm: ${options.realm}`);
+  console.log(
+    `  Realm: ${options.realm} (${options.result.realmStatus ?? "unchanged"})`,
+  );
   console.log(`  Client: ${options.clientId} (${options.result.clientStatus})`);
-  console.log(`  Admin user: ${credentials.username}`);
+  console.log(`  Admin console: ${credentials.username} / ${credentials.password}`);
+  const realmUser = resolveRealmUserCredentials();
+  console.log(
+    `  App login: ${realmUser.username} / ${realmUser.password} (${options.result.realmUserStatus ?? "unchanged"})`,
+  );
 
   if (options.result.runner?.pid != null) {
     console.log(`  Keycloak PID: ${options.result.runner.pid}`);

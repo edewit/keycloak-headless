@@ -5,9 +5,9 @@ import { join, resolve } from "node:path";
 import {
   DEFAULT_KEYCLOAK_BASE_URL,
   DEFAULT_KEYCLOAK_TIMEOUT_MS,
-  isKeycloakReady,
+  isKeycloakServerUp,
   normalizeKeycloakBaseUrl,
-  waitForKeycloak,
+  waitForKeycloakServer,
 } from "./keycloak-admin.js";
 
 export interface InstallDependenciesResult {
@@ -116,7 +116,7 @@ export async function startKeycloakRunner(options: {
   );
   const timeoutMs = options.timeoutMs ?? DEFAULT_KEYCLOAK_TIMEOUT_MS;
 
-  if (await isKeycloakReady(baseUrl, options.realm)) {
+  if (await isKeycloakServerUp(baseUrl)) {
     console.log(`Using existing Keycloak at ${baseUrl}`);
     return {
       started: false,
@@ -151,7 +151,7 @@ export async function startKeycloakRunner(options: {
     "utf8",
   );
 
-  await waitForKeycloak(baseUrl, options.realm, timeoutMs);
+  await waitForKeycloakServer(baseUrl, timeoutMs);
 
   return {
     started: true,

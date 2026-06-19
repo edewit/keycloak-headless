@@ -10,7 +10,12 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export type Framework = "react" | "vue" | "solid" | "svelte";
+import {
+  applyPlaceholders,
+  type Framework,
+} from "./template-placeholders.js";
+
+export type { Framework } from "./template-placeholders.js";
 
 export interface ScaffoldOptions {
   framework: Framework;
@@ -36,15 +41,6 @@ const TEXT_EXTENSIONS = new Set([
   ".cjs",
 ]);
 
-const PLACEHOLDERS: Record<string, (options: ScaffoldOptions) => string> = {
-  __PROJECT_NAME__: (o) => o.projectName,
-  __KEYCLOAK_URL__: (o) => o.keycloakUrl,
-  __KEYCLOAK_REALM__: (o) => o.keycloakRealm,
-  __KEYCLOAK_CLIENT_ID__: (o) => o.keycloakClientId,
-  __KEYCLOAK_HEADLESS_VERSION__: (o) => o.keycloakHeadlessVersion,
-  __KEYCLOAK_ROLE_CREATED_VERSION__: (o) => o.keycloakRoleCreatedVersion,
-};
-
 export function getPackageRoot(fromModuleUrl: string): string {
   const cliDir = dirname(fileURLToPath(fromModuleUrl));
   return resolve(cliDir, "../..");
@@ -61,17 +57,6 @@ export function validateTargetDirectory(targetDir: string): void {
       `Target directory "${targetDir}" already exists and is not empty.`,
     );
   }
-}
-
-function substitutePlaceholders(
-  content: string,
-  options: ScaffoldOptions,
-): string {
-  let result = content;
-  for (const [token, getValue] of Object.entries(PLACEHOLDERS)) {
-    result = result.replaceAll(token, getValue(options));
-  }
-  return result;
 }
 
 function copyTemplateDirectory(
@@ -94,7 +79,7 @@ function copyTemplateDirectory(
     const ext = entry.includes(".") ? `.${entry.split(".").pop()}` : "";
     if (TEXT_EXTENSIONS.has(ext)) {
       const content = readFileSync(sourcePath, "utf8");
-      writeFileSync(targetPath, substitutePlaceholders(content, options), "utf8");
+      writeFileSync(targetPath, applyPlaceholders(content, options), "utf8");
     } else {
       cpSync(sourcePath, targetPath);
     }
@@ -122,7 +107,7 @@ export function scaffoldProject(options: ScaffoldOptions): void {
   const rolesFixtureContent = readFileSync(rolesFixture, "utf8");
   writeFileSync(
     join(options.targetDir, "keycloak-roles.json"),
-    substitutePlaceholders(rolesFixtureContent, options),
+    applyPlaceholders(rolesFixtureContent, options),
     "utf8",
   );
 }

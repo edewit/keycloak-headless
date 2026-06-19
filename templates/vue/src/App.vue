@@ -13,6 +13,7 @@ const showAdmin = computed(() => roleChecks.value.hasRealmRole("admin"));
 </script>
 
 <template>
+  <!-- client-id is required by kc-provider; adjust url/realm/client-id for your Keycloak -->
   <kc-provider
     url="__KEYCLOAK_URL__"
     realm="__KEYCLOAK_REALM__"

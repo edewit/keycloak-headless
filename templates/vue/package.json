@@ -12,6 +12,7 @@
     "fetch-roles": "fetch-keycloak-roles --url http://localhost:8080 --realm __KEYCLOAK_REALM__ --username admin --password admin --output ./keycloak-roles.json"
   },
   "dependencies": {
+    "@lit/context": "^1.1.6",
     "keycloak-headless": "^__KEYCLOAK_HEADLESS_VERSION__",
     "vue": "^3.5.13"
   },

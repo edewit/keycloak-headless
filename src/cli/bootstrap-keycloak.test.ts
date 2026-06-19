@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const installProjectDependencies = vi.fn();
 const startKeycloakRunner = vi.fn();
+const ensureRealm = vi.fn();
+const ensureRealmUser = vi.fn();
 const ensureSpaClient = vi.fn();
 
 vi.mock("./start-keycloak-runner.js", () => ({
@@ -13,6 +15,8 @@ vi.mock("./keycloak-admin.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./keycloak-admin.js")>();
   return {
     ...actual,
+    ensureRealm,
+    ensureRealmUser,
     ensureSpaClient,
     resolveAdminCredentials: () => ({
       username: "admin",
@@ -34,6 +38,8 @@ describe("bootstrapKeycloak", () => {
       pid: 12345,
       baseUrl: "http://127.0.0.1:8080",
     });
+    ensureRealm.mockResolvedValue("created");
+    ensureRealmUser.mockResolvedValue("created");
     ensureSpaClient.mockResolvedValue("created");
 
     const { bootstrapKeycloak } = await import("./bootstrap-keycloak.js");
@@ -46,6 +52,17 @@ describe("bootstrapKeycloak", () => {
 
     expect(installProjectDependencies).toHaveBeenCalledWith("/tmp/example");
     expect(startKeycloakRunner).toHaveBeenCalled();
+    expect(ensureRealm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        realm: "master",
+      }),
+    );
+    expect(ensureRealmUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        realm: "master",
+        user: { username: "user", password: "user" },
+      }),
+    );
     expect(ensureSpaClient).toHaveBeenCalledWith(
       expect.objectContaining({
         clientId: "example-spa",
@@ -54,6 +71,8 @@ describe("bootstrapKeycloak", () => {
     );
     expect(result).toEqual({
       ok: true,
+      realmStatus: "created",
+      realmUserStatus: "created",
       clientStatus: "created",
       runner: {
         started: true,

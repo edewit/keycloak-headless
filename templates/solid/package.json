@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "run-keycloak": "keycloak-runner -p node_modules/keycloak-headless-role-created/target/role-created-event-listener.jar --realm __KEYCLOAK_REALM__ --patch '{ \"adminEventsEnabled\": true, \"eventsListeners\": [\"headless-role-created\"] }' -- --spi-events-listener--headless-role-created--export-directory=.",
+    "run-keycloak": "keycloak-runner -p node_modules/keycloak-onboarding-ui/target/keycloak-onboarding-ui-theme.jar -p node_modules/keycloak-headless-role-created/target/role-created-event-listener.jar --realm __KEYCLOAK_REALM__ --patch '{ \"adminTheme\": \"keycloak-onboarding-ui\", \"adminEventsEnabled\": true, \"eventsListeners\": [\"headless-role-created\"] }' -- --spi-events-listener--headless-role-created--export-directory=.",
     "fetch-roles": "fetch-keycloak-roles --url http://localhost:8080 --realm __KEYCLOAK_REALM__ --username admin --password admin --output ./keycloak-roles.json"
   },
   "dependencies": {
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "keycloak-headless-role-created": "^__KEYCLOAK_ROLE_CREATED_VERSION__",
+    "keycloak-onboarding-ui": "0.0.1-preview.0",
     "keycloak-runner": "0.0.1-alpha.2",
     "typescript": "~5.8.3",
     "vite": "^6.3.3",

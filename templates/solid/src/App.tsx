@@ -13,14 +13,10 @@ export function App() {
   const error = createMemo(() => auth().error);
 
   return (
-    <kc-provider
-      url="__KEYCLOAK_URL__"
-      realm="__KEYCLOAK_REALM__"
-      client-id="__KEYCLOAK_CLIENT_ID__"
-    >
+    <kc-provider url="__KEYCLOAK_URL__" realm="__KEYCLOAK_REALM__" client-id="__KEYCLOAK_CLIENT_ID__">
       <div ref={host} style={{ "font-family": "system-ui", padding: "1rem" }}>
         <h1>kc-provider + Solid</h1>
-
+        
         <Show when={!keycloak() && !error()}>
           <p>Initializing Keycloak…</p>
         </Show>
@@ -76,3 +72,5 @@ export function App() {
     </kc-provider>
   );
 }
+
+

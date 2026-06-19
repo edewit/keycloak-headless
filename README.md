@@ -55,6 +55,14 @@ When developing this repository:
 pnpm create-app
 ```
 
+Demo app changes belong in `example/{react,vue,solid,svelte}/`. After editing an example, regenerate the scaffold templates before committing:
+
+```bash
+pnpm sync-templates
+```
+
+`pnpm build` runs this automatically. CI fails if `templates/` drifts from `example/` (`pnpm sync-templates:check`).
+
 ## Entry points
 
 | Import | Purpose |

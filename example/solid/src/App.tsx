@@ -8,17 +8,22 @@ export function App() {
   let host: HTMLDivElement | undefined;
   const auth = useKeycloakAuth(() => host ?? null);
 
-  const keycloak = createMemo(() => auth().keycloak);
+  const oidc = createMemo(() => auth().oidc);
   const authenticated = createMemo(() => auth().authenticated);
   const error = createMemo(() => auth().error);
 
   return (
-    <kc-provider url="http://localhost:8080/" realm="master" client-id="example-spa">
+    <kc-provider
+      url="http://localhost:8080/"
+      realm="master"
+      client-id="example-spa"
+      base-url={import.meta.env.BASE_URL}
+    >
       <div ref={host} style={{ "font-family": "system-ui", padding: "1rem" }}>
         <h1>kc-provider + Solid</h1>
-        
-        <Show when={!keycloak() && !error()}>
-          <p>Initializing Keycloak…</p>
+
+        <Show when={!oidc() && !error()}>
+          <p>Initializing authentication…</p>
         </Show>
 
         <Show when={error()}>
@@ -28,7 +33,7 @@ export function App() {
           </p>
         </Show>
 
-        <Show when={keycloak()}>
+        <Show when={oidc()}>
           <p>Authenticated: {String(authenticated())}</p>
 
           <kc-render-authenticated>
@@ -72,5 +77,3 @@ export function App() {
     </kc-provider>
   );
 }
-
-

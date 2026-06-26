@@ -9,20 +9,20 @@ import { KEYCLOAK_CONFIG } from "./keycloak-config.generated.js";
 import { realmRolesAttr } from "./realm-roles-attr.js";
 
 function AuthDemo() {
-  const { keycloak, authenticated, error } = useAuth();
+  const { oidc, authenticated, error } = useAuth();
   const { hasRealmRole } = useKeycloakConfigRoles(KEYCLOAK_CONFIG);
 
   return (
     <div style={{ fontFamily: "system-ui", padding: "1rem" }}>
       <h1>kc-provider + React</h1>
-      {!keycloak && !error && <p>Initializing Keycloak…</p>}
+      {!oidc && !error && <p>Initializing authentication…</p>}
       {error != null && (
         <p style={{ color: "crimson" }}>
           Init error (expected if Keycloak is not running):{" "}
           {String((error as Error)?.message ?? error)}
         </p>
       )}
-      {keycloak && (
+      {oidc && (
         <>
           <p>Authenticated: {String(authenticated)}</p>
           <kc-render-authenticated>
@@ -78,6 +78,7 @@ export function App() {
       url="__KEYCLOAK_URL__"
       realm="__KEYCLOAK_REALM__"
       clientId="__KEYCLOAK_CLIENT_ID__"
+      baseUrl={import.meta.env.BASE_URL}
     >
       <AuthDemo />
     </KeycloakProvider>

@@ -23,12 +23,12 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
-      keycloak-js:
-        specifier: ^26.2.4
-        version: 26.2.4
       lit:
         specifier: ^3.3.2
         version: 3.3.2
+      oidc-spa:
+        specifier: ^10.2.3
+        version: 10.2.3(@types/react@19.2.14)(react@19.2.6)
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.4
@@ -96,6 +96,9 @@ importers:
       keycloak-headless:
         specifier: workspace:*
         version: link:../..
+      oidc-spa:
+        specifier: ^10.2.3
+        version: 10.2.3(@types/react@19.2.14)(react@19.2.5)
       react:
         specifier: ^19.1.0
         version: 19.2.5
@@ -130,6 +133,9 @@ importers:
       keycloak-headless:
         specifier: workspace:*
         version: link:../..
+      oidc-spa:
+        specifier: ^10.2.3
+        version: 10.2.3(@types/react@19.2.14)(react@18.3.1)
       solid-js:
         specifier: ^1.9.3
         version: 1.9.12
@@ -158,6 +164,9 @@ importers:
       keycloak-headless:
         specifier: workspace:*
         version: link:../..
+      oidc-spa:
+        specifier: ^10.2.3
+        version: 10.2.3(@types/react@19.2.14)(react@19.2.6)
     devDependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^5.0.3
@@ -186,6 +195,9 @@ importers:
       keycloak-headless:
         specifier: workspace:*
         version: link:../..
+      oidc-spa:
+        specifier: ^10.2.3
+        version: 10.2.3(@types/react@19.2.14)(react@19.2.6)
       vue:
         specifier: ^3.5.13
         version: 3.5.32(typescript@5.8.3)
@@ -2747,6 +2759,38 @@ packages:
   object-inspect@1.13.4:
     resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
     engines: {node: '>= 0.4'}
+
+  oidc-spa@10.2.3:
+    resolution: {integrity: sha512-rbxDM5Ss1DLhXpjR35S6eGoI9o3+S8Z7gQVEn2yg4t11iM0nDI/XXxu+NDhuKKDwZaqCeeJYNZnUEc6rXG2lKQ==}
+    peerDependencies:
+      '@angular/common': '*'
+      '@angular/core': '*'
+      '@angular/router': '*'
+      '@nuxt/kit': '*'
+      '@tanstack/react-router': '*'
+      '@tanstack/react-start': '*'
+      '@types/react': '*'
+      react: '*'
+      rxjs: '*'
+    peerDependenciesMeta:
+      '@angular/common':
+        optional: true
+      '@angular/core':
+        optional: true
+      '@angular/router':
+        optional: true
+      '@nuxt/kit':
+        optional: true
+      '@tanstack/react-router':
+        optional: true
+      '@tanstack/react-start':
+        optional: true
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+      rxjs:
+        optional: true
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -6217,6 +6261,21 @@ snapshots:
   object-assign@4.1.1: {}
 
   object-inspect@1.13.4: {}
+
+  oidc-spa@10.2.3(@types/react@19.2.14)(react@18.3.1):
+    optionalDependencies:
+      '@types/react': 19.2.14
+      react: 18.3.1
+
+  oidc-spa@10.2.3(@types/react@19.2.14)(react@19.2.5):
+    optionalDependencies:
+      '@types/react': 19.2.14
+      react: 19.2.5
+
+  oidc-spa@10.2.3(@types/react@19.2.14)(react@19.2.6):
+    optionalDependencies:
+      '@types/react': 19.2.14
+      react: 19.2.6
 
   on-finished@2.4.1:
     dependencies:

@@ -1,4 +1,9 @@
-import { createApp } from "vue";
-import App from "./App.vue";
+import { oidcEarlyInit } from "oidc-spa/core";
 
-createApp(App).mount("#app");
+const { shouldLoadApp } = oidcEarlyInit({
+  BASE_URL: import.meta.env.BASE_URL,
+});
+
+if (shouldLoadApp) {
+  void import("./main.lazy");
+}

@@ -4,6 +4,8 @@
 
   import { realmRolesAttr } from "./realm-roles-attr.js";
 
+  const baseUrl = import.meta.env.BASE_URL;
+
   let host: HTMLDivElement | undefined;
   const auth = useKeycloakAuth(() => host ?? null);
 </script>
@@ -12,12 +14,13 @@
   url="__KEYCLOAK_URL__"
   realm="__KEYCLOAK_REALM__"
   client-id="__KEYCLOAK_CLIENT_ID__"
+  base-url={baseUrl}
 >
   <div bind:this={host} style="font-family: system-ui; padding: 1rem">
     <h1>kc-provider + Svelte</h1>
 
-    {#if !$auth.keycloak && $auth.error == null}
-      <p>Initializing Keycloak…</p>
+    {#if !$auth.oidc && $auth.error == null}
+      <p>Initializing authentication…</p>
     {/if}
 
     {#if $auth.error != null}
@@ -27,7 +30,7 @@
       </p>
     {/if}
 
-    {#if $auth.keycloak}
+    {#if $auth.oidc}
       <p>Authenticated: {String($auth.authenticated)}</p>
 
       <kc-render-authenticated>

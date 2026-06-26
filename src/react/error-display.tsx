@@ -135,9 +135,9 @@ export function ErrorDisplay({
           <div><strong style={{ color: '#a22' }}>Code:</strong> {error.code}</div>
           <div><strong style={{ color: '#a22' }}>Message:</strong> {error.message}</div>
           <div><strong style={{ color: '#a22' }}>Recoverable:</strong> {error.recoverable ? 'Yes' : 'No'}</div>
-          {error.cause && (
+          {error.cause != null ? (
             <div><strong style={{ color: '#a22' }}>Cause:</strong> {error.cause instanceof Error ? error.cause.message : String(error.cause)}</div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

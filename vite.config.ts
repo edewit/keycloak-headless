@@ -44,10 +44,14 @@ const externalPackages = new Set([
   "svelte",
   "svelte/store",
   "solid-js",
+  "oidc-spa",
+  "oidc-spa/core",
+  "oidc-spa/keycloak",
 ]);
 
 function isExternal(id: string): boolean {
   if (externalPackages.has(id)) return true;
+  if (id.startsWith("oidc-spa/")) return true;
   if (id.startsWith("svelte/")) return true;
   if (id.includes("/svelte/src/internal/")) return true;
   return false;

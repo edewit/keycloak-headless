@@ -128,4 +128,4 @@ npm publish --access public
 
 ## Keycloak version
 
-Built against Keycloak **26.2.5** (aligned with `keycloak-js` 26.x in the parent project). Use a matching server version.
+Built against Keycloak **26.2.5** (aligned with oidc-spa / Keycloak 26.x in the parent project). Use a matching server version.

@@ -2,74 +2,49 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fixture } from "@open-wc/testing";
 import { html } from "lit";
 
-const { mockInit } = vi.hoisted(() => ({
-  mockInit: vi.fn().mockResolvedValue(false),
+const { mockCreateOidc } = vi.hoisted(() => ({
+  mockCreateOidc: vi.fn().mockResolvedValue({
+    isUserLoggedIn: false,
+    issuerUri: "http://localhost:8080/realms/r",
+    clientId: "c",
+    validRedirectUri: "http://localhost:5173/",
+    initializationError: undefined,
+    login: vi.fn(),
+  }),
 }));
 
-vi.mock("keycloak-js", () => ({
-  default: class MockKeycloak {
-    authenticated = false;
-    init = mockInit;
-    onAuthSuccess?: () => void;
-    onAuthRefreshSuccess?: () => void;
-    onAuthLogout?: () => void;
-    onAuthError?: (e?: unknown) => void;
-    onAuthRefreshError?: () => void;
-    onTokenExpired?: () => void;
-    onActionUpdate?: () => void;
-  },
+vi.mock("oidc-spa/core", () => ({
+  createOidc: mockCreateOidc,
 }));
 
 await import("./kc-provider.js");
 
 describe("KcProvider", () => {
   beforeEach(() => {
-    mockInit.mockClear();
+    mockCreateOidc.mockClear();
   });
 
-  it("passes declarative init options to keycloak.init", async () => {
+  it("passes declarative init options to createOidc", async () => {
     await fixture(html`
       <kc-provider
-        url="/"
+        url="http://localhost:8080/"
         realm="r"
-        clientId="c"
+        client-id="c"
         on-load="login-required"
-        scope="openid profile"
-        redirect-uri="https://app.example/cb"
+        scope="profile email"
         enable-logging="true"
-        pkce-method="false"
-        flow="standard"
-        response-mode="fragment"
-        adapter="default"
-        logout-method="POST"
-        locale="nl"
-        message-receive-timeout="15000"
-        silent-check-sso-redirect-uri="https://app.example/silent"
-        silent-check-sso-fallback="false"
-        check-login-iframe="false"
-        check-login-iframe-interval="10"
-        use-nonce="false"
+        base-url="/app/"
       ></kc-provider>
     `);
-    await vi.waitUntil(() => mockInit.mock.calls.length > 0);
-    expect(mockInit).toHaveBeenCalledWith(
+    await vi.waitUntil(() => mockCreateOidc.mock.calls.length > 0);
+    expect(mockCreateOidc).toHaveBeenCalledWith(
       expect.objectContaining({
-        onLoad: "login-required",
-        scope: "openid profile",
-        redirectUri: "https://app.example/cb",
-        enableLogging: true,
-        pkceMethod: false,
-        flow: "standard",
-        responseMode: "fragment",
-        adapter: "default",
-        logoutMethod: "POST",
-        locale: "nl",
-        messageReceiveTimeout: 15000,
-        silentCheckSsoRedirectUri: "https://app.example/silent",
-        silentCheckSsoFallback: false,
-        checkLoginIframe: false,
-        checkLoginIframeInterval: 10,
-        useNonce: false,
+        issuerUri: "http://localhost:8080/realms/r",
+        clientId: "c",
+        autoLogin: true,
+        scopes: ["profile", "email"],
+        debugLogs: true,
+        BASE_URL: "/app/",
       }),
     );
   });
@@ -77,17 +52,17 @@ describe("KcProvider", () => {
   it("defaults onLoad to check-sso when attributes are omitted", async () => {
     await fixture(html`
       <kc-provider
-        url="/"
+        url="http://localhost:8080/"
         realm="r"
-        clientId="c"
+        client-id="c"
       ></kc-provider>
     `);
-    await vi.waitUntil(() => mockInit.mock.calls.length > 0);
-    expect(mockInit).toHaveBeenCalledWith(
+    await vi.waitUntil(() => mockCreateOidc.mock.calls.length > 0);
+    expect(mockCreateOidc).toHaveBeenCalledWith(
       expect.objectContaining({
-        onLoad: "check-sso",
+        autoLogin: false,
       }),
     );
-    expect(mockInit.mock.calls[0][0]).not.toHaveProperty("enableLogging");
+    expect(mockCreateOidc.mock.calls[0][0]).not.toHaveProperty("debugLogs");
   });
 });

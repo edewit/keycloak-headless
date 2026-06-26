@@ -1,16 +1,9 @@
-/* @refresh reload */
-import { render } from "solid-js/web";
+import { oidcEarlyInit } from "oidc-spa/core";
 
-import { App } from "./App";
+const { shouldLoadApp } = oidcEarlyInit({
+  BASE_URL: import.meta.env.BASE_URL,
+});
 
-const root = document.getElementById("root");
-
-if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
-  throw new Error(
-    "Root element not found. Did you forget to add it to your index.html? Or maybe the id attribute got misspelled?",
-  );
+if (shouldLoadApp) {
+  void import("./main.lazy");
 }
-
-render(() => <App />, root!);
-
-

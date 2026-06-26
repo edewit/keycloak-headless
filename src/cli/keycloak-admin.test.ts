@@ -230,7 +230,7 @@ describe("keycloak-admin", () => {
       expect.objectContaining({
         clientId: "example-spa",
         publicClient: true,
-        redirectUris: ["http://localhost:5173/*"],
+        redirectUris: ["http://localhost:5173/"],
         webOrigins: ["http://localhost:5173"],
       }),
     );
@@ -258,7 +258,7 @@ describe("keycloak-admin", () => {
         enabled: true,
         publicClient: true,
         standardFlowEnabled: true,
-        redirectUris: ["http://localhost:3000/*"],
+        redirectUris: ["http://localhost:3000/"],
         webOrigins: ["http://localhost:3000"],
       },
     ]);
@@ -284,7 +284,7 @@ describe("keycloak-admin", () => {
         enabled: true,
         publicClient: true,
         standardFlowEnabled: true,
-        redirectUris: ["http://localhost:5173/*"],
+        redirectUris: ["http://localhost:5173/"],
         webOrigins: ["http://localhost:5173"],
       },
     ]);

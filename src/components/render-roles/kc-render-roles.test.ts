@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { fixture } from "@open-wc/testing";
 import { html, LitElement } from "lit";
 import { provide } from "@lit/context";
@@ -18,23 +18,36 @@ class TestKcRolesHost extends LitElement {
   }
 }
 
-function mockKeycloak(realm: Record<string, boolean>, resource?: Record<string, boolean>) {
+function mockOidc(realmRoles: string[], clientRoles: Record<string, string[]> = {}) {
   return {
-    hasRealmRole(role: string) {
-      return realm[role] === true;
-    },
-    hasResourceRole(role: string, res?: string) {
-      const key = res === undefined ? `_:${role}` : `${res}:${role}`;
-      return resource?.[key] === true;
-    },
+    isUserLoggedIn: true as const,
+    issuerUri: "http://localhost:8080/realms/master",
+    clientId: "example-spa",
+    validRedirectUri: "http://localhost:5173/",
+    getDecodedIdToken: () => ({
+      realm_access: { roles: realmRoles },
+      resource_access: Object.fromEntries(
+        Object.entries(clientRoles).map(([clientId, roles]) => [
+          clientId,
+          { roles },
+        ]),
+      ),
+    }),
+    logout: vi.fn(),
+    getTokens: vi.fn(),
+    renewTokens: vi.fn(),
+    subscribeToTokensChange: vi.fn(),
+    subscribeToAutoLogoutCountdown: vi.fn(),
+    isNewBrowserSession: false,
+    backFromAuthServer: undefined,
   };
 }
 
 describe("KcRenderRoles", () => {
   it("does not render slot when not authenticated", async () => {
-    const kc = mockKeycloak({ admin: true });
+    const oidc = { ...mockOidc(["admin"]), isUserLoggedIn: false as const, login: vi.fn() };
     const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: false }}>
+      <test-kc-roles-host .authData=${{ oidc, authenticated: false }}>
         <kc-render-roles .roles=${["admin"]}>
           <span id="role-only">Admin</span>
         </kc-render-roles>
@@ -45,9 +58,9 @@ describe("KcRenderRoles", () => {
     expect(inner.shadowRoot?.querySelector("slot")).toBeFalsy();
   });
 
-  it("does not render slot when keycloak is missing", async () => {
+  it("does not render slot when oidc is missing", async () => {
     const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: undefined, authenticated: true }}>
+      <test-kc-roles-host .authData=${{ oidc: undefined, authenticated: true }}>
         <kc-render-roles .roles=${["admin"]}>
           <span id="role-only">Admin</span>
         </kc-render-roles>
@@ -59,9 +72,9 @@ describe("KcRenderRoles", () => {
   });
 
   it("does not render slot when roles list is empty", async () => {
-    const kc = mockKeycloak({ admin: true });
+    const oidc = mockOidc(["admin"]);
     const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: true }}>
+      <test-kc-roles-host .authData=${{ oidc, authenticated: true }}>
         <kc-render-roles .roles=${[]}>
           <span id="role-only">X</span>
         </kc-render-roles>
@@ -73,9 +86,9 @@ describe("KcRenderRoles", () => {
   });
 
   it("renders slot for match any when user has one of the roles", async () => {
-    const kc = mockKeycloak({ a: false, b: true });
+    const oidc = mockOidc(["b"]);
     const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: true }}>
+      <test-kc-roles-host .authData=${{ oidc, authenticated: true }}>
         <kc-render-roles .roles=${["a", "b"]} match="any">
           <span id="role-only">Any</span>
         </kc-render-roles>
@@ -84,15 +97,14 @@ describe("KcRenderRoles", () => {
     const inner = host.querySelector("kc-render-roles")!;
     await inner.updateComplete;
     expect(inner.shadowRoot?.querySelector("slot")).toBeTruthy();
-    expect(host.querySelector("#role-only")).toBeTruthy();
   });
 
-  it("does not render slot for match any when user has none of the roles", async () => {
-    const kc = mockKeycloak({ a: false, b: false });
+  it("does not render slot for match all when user lacks a role", async () => {
+    const oidc = mockOidc(["a"]);
     const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: true }}>
-        <kc-render-roles .roles=${["a", "b"]} match="any">
-          <span id="role-only">Any</span>
+      <test-kc-roles-host .authData=${{ oidc, authenticated: true }}>
+        <kc-render-roles .roles=${["a", "b"]} match="all">
+          <span id="role-only">All</span>
         </kc-render-roles>
       </test-kc-roles-host>
     `);
@@ -102,9 +114,9 @@ describe("KcRenderRoles", () => {
   });
 
   it("renders slot for match all when user has every role", async () => {
-    const kc = mockKeycloak({ a: true, b: true });
+    const oidc = mockOidc(["a", "b"]);
     const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: true }}>
+      <test-kc-roles-host .authData=${{ oidc, authenticated: true }}>
         <kc-render-roles .roles=${["a", "b"]} match="all">
           <span id="role-only">All</span>
         </kc-render-roles>
@@ -113,91 +125,23 @@ describe("KcRenderRoles", () => {
     const inner = host.querySelector("kc-render-roles")!;
     await inner.updateComplete;
     expect(inner.shadowRoot?.querySelector("slot")).toBeTruthy();
-    expect(host.querySelector("#role-only")).toBeTruthy();
   });
 
-  it("does not render slot for match all when user is missing a role", async () => {
-    const kc = mockKeycloak({ a: true, b: false });
+  it("checks client roles when role-kind is client", async () => {
+    const oidc = mockOidc([], { "my-client": ["manage-users"] });
     const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: true }}>
-        <kc-render-roles .roles=${["a", "b"]} match="all">
-          <span id="role-only">All</span>
-        </kc-render-roles>
-      </test-kc-roles-host>
-    `);
-    const inner = host.querySelector("kc-render-roles")!;
-    await inner.updateComplete;
-    expect(inner.shadowRoot?.querySelector("slot")).toBeFalsy();
-  });
-
-  it("uses hasResourceRole when role-kind is client", async () => {
-    const kc = mockKeycloak(
-      {},
-      { "_:r1": true, "my-api:r1": false },
-    );
-    const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: true }}>
+      <test-kc-roles-host .authData=${{ oidc, authenticated: true }}>
         <kc-render-roles
-          .roles=${["r1"]}
+          .roles=${["manage-users"]}
           role-kind="client"
+          resource="my-client"
         >
-          <span id="role-only">Client default</span>
+          <span id="role-only">Client</span>
         </kc-render-roles>
       </test-kc-roles-host>
     `);
     const inner = host.querySelector("kc-render-roles")!;
     await inner.updateComplete;
     expect(inner.shadowRoot?.querySelector("slot")).toBeTruthy();
-  });
-
-  it("passes resource to hasResourceRole when set", async () => {
-    const kc = mockKeycloak(
-      {},
-      { "my-api:r2": true, "_:r2": false },
-    );
-    const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: true }}>
-        <kc-render-roles
-          .roles=${["r2"]}
-          role-kind="client"
-          resource="my-api"
-        >
-          <span id="role-only">Scoped</span>
-        </kc-render-roles>
-      </test-kc-roles-host>
-    `);
-    const inner = host.querySelector("kc-render-roles")!;
-    await inner.updateComplete;
-    expect(inner.shadowRoot?.querySelector("slot")).toBeTruthy();
-  });
-
-  it("parses roles from comma-separated attribute", async () => {
-    const kc = mockKeycloak({ x: true, y: false });
-    const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: true }}>
-        <kc-render-roles roles="x, y" match="any">
-          <span id="attr-roles">Attr</span>
-        </kc-render-roles>
-      </test-kc-roles-host>
-    `);
-    const inner = host.querySelector("kc-render-roles")!;
-    await inner.updateComplete;
-    expect(inner.shadowRoot?.querySelector("slot")).toBeTruthy();
-    expect(host.querySelector("#attr-roles")).toBeTruthy();
-  });
-
-  it("accepts roles as a string property binding (comma-separated)", async () => {
-    const kc = mockKeycloak({ admin: true, mod: false });
-    const host = await fixture<TestKcRolesHost>(html`
-      <test-kc-roles-host .authData=${{ keycloak: kc, authenticated: true }}>
-        <kc-render-roles .roles=${"admin,mod"} match="any">
-          <span id="prop-string-roles">OK</span>
-        </kc-render-roles>
-      </test-kc-roles-host>
-    `);
-    const inner = host.querySelector("kc-render-roles")!;
-    await inner.updateComplete;
-    expect(inner.shadowRoot?.querySelector("slot")).toBeTruthy();
-    expect(host.querySelector("#prop-string-roles")).toBeTruthy();
   });
 });

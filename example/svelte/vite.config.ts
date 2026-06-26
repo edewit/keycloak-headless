@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { oidcSpa } from "oidc-spa/vite-plugin";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
@@ -13,6 +14,7 @@ const rolesExport =
 export default defineConfig({
   plugins: [
     svelte(),
+    oidcSpa(),
     keycloakRolesPlugin({
       input: rolesExport,
       output: resolve(__dirname, "src/keycloak-config.generated.ts"),

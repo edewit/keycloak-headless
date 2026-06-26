@@ -6,49 +6,40 @@ import {
   createRoleCheckerFromConfig,
 } from "./create-role-checker.js";
 
-function mockKeycloak(
-  realm: Record<string, boolean>,
-  resource?: Record<string, boolean>,
-) {
-  return {
-    hasRealmRole(role: string) {
-      return realm[role] === true;
-    },
-    hasResourceRole(role: string, clientId?: string) {
-      const key =
-        clientId == null || clientId === ""
-          ? `_:${role}`
-          : `${clientId}:${role}`;
-      return resource?.[key] === true;
-    },
-  };
-}
-
 describe("createRoleChecker", () => {
   it("createRealmRoleChecker checks realm roles", () => {
-    const kc = mockKeycloak({ admin: true, editor: false });
-    const { hasRealmRole } = createRealmRoleChecker(kc, ["admin", "editor"] as const);
+    const { hasRealmRole } = createRealmRoleChecker(["admin"], [
+      "admin",
+      "editor",
+    ] as const);
     expect(hasRealmRole("admin")).toBe(true);
     expect(hasRealmRole("editor")).toBe(false);
   });
 
   it("createClientRoleChecker checks client roles", () => {
-    const kc = mockKeycloak({}, { "my-api:read": true });
-    const { hasClientRole } = createClientRoleChecker(
-      kc,
-      "my-api",
-      ["read", "write"] as const,
-    );
+    const { hasClientRole } = createClientRoleChecker(["read"], "my-api", [
+      "read",
+      "write",
+    ] as const);
     expect(hasClientRole("read")).toBe(true);
     expect(hasClientRole("write")).toBe(false);
   });
 
   it("createRoleCheckerFromConfig exposes realm and client helpers", () => {
-    const kc = mockKeycloak(
-      { admin: true },
-      { "example-spa:read": true },
-    );
-    const checker = createRoleCheckerFromConfig(kc, {
+    const oidc = {
+      isUserLoggedIn: true as const,
+      issuerUri: "http://localhost:8080/realms/master",
+      clientId: "example-spa",
+      validRedirectUri: "http://localhost:5173/",
+      getDecodedIdToken: () => ({
+        realm_access: { roles: ["admin"] },
+        resource_access: {
+          "example-spa": { roles: ["read"] },
+        },
+      }),
+    };
+
+    const checker = createRoleCheckerFromConfig(oidc, {
       realm: "master",
       roles: ["admin"] as const,
       clientRoles: {

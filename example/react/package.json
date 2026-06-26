@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "keycloak-headless": "workspace:*",
+    "oidc-spa": "^10.2.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

@@ -6,6 +6,8 @@ import { useKeycloakAuth, useKeycloakConfigRoles } from "keycloak-headless/vue";
 import { KEYCLOAK_CONFIG } from "./keycloak-config.generated.js";
 import { realmRolesAttr } from "./realm-roles-attr.js";
 
+const baseUrl = import.meta.env.BASE_URL;
+
 const hostRef = ref<HTMLDivElement | null>(null);
 const auth = useKeycloakAuth(hostRef);
 const roleChecks = useKeycloakConfigRoles(auth, KEYCLOAK_CONFIG);
@@ -18,14 +20,15 @@ const showAdmin = computed(() => roleChecks.value.hasRealmRole("admin"));
     url="__KEYCLOAK_URL__"
     realm="__KEYCLOAK_REALM__"
     client-id="__KEYCLOAK_CLIENT_ID__"
+    :base-url="baseUrl"
   >
     <div
       ref="hostRef"
       :style="{ fontFamily: 'system-ui', padding: '1rem' }"
     >
       <h1>kc-provider + Vue</h1>
-      <template v-if="!auth.keycloak && auth.error == null">
-        <p>Initializing Keycloak…</p>
+      <template v-if="!auth.oidc && auth.error == null">
+        <p>Initializing authentication…</p>
       </template>
       <p v-if="auth.error != null" style="color: crimson">
         Init error (expected if Keycloak is not running):
@@ -35,7 +38,7 @@ const showAdmin = computed(() => roleChecks.value.hasRealmRole("admin"));
           )
         }}
       </p>
-      <template v-if="auth.keycloak">
+      <template v-if="auth.oidc">
         <p>Authenticated: {{ String(auth.authenticated) }}</p>
         <kc-render-authenticated>
           <p style="background: #e8f5e9; padding: 0.5rem">

@@ -12,7 +12,20 @@ export {
   createClientRoleChecker,
   createRealmRoleChecker,
   createRoleCheckerFromConfig,
+  createRoleCheckerFromOidc,
 } from "./roles/create-role-checker.js";
+
+export {
+  buildIssuerUri,
+  getRealmRoles,
+  getClientRoles,
+  hasRealmRole,
+  hasClientRole,
+  setupOidcEarlyInit,
+  wrapOidcError,
+  wrapOidcInitializationError,
+} from "./oidc/index.js";
+export type { Oidc } from "./oidc/index.js";
 
 // Error handling exports
 export {

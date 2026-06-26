@@ -302,7 +302,7 @@ function buildSpaClientRepresentation(clientId: string): ClientRepresentation {
     standardFlowEnabled: true,
     directAccessGrantsEnabled: false,
     implicitFlowEnabled: false,
-    redirectUris: [`${devOrigin}/*`],
+    redirectUris: [`${devOrigin}/`],
     webOrigins: [devOrigin],
     attributes: {
       "pkce.code.challenge.method": "S256",

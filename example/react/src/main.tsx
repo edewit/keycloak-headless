@@ -1,9 +1,9 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { App } from "./App";
+import { oidcEarlyInit } from "oidc-spa/core";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+const { shouldLoadApp } = oidcEarlyInit({
+  BASE_URL: import.meta.env.BASE_URL,
+});
+
+if (shouldLoadApp) {
+  void import("./main.lazy");
+}

@@ -5,7 +5,18 @@ import { provide } from "@lit/context";
 import { customElement, state } from "lit/decorators.js";
 
 import { authContext, type AuthState } from "../provider/kc-context.js";
-import "./kc-account-link.js";
+
+const { mockGetAccountUrl } = vi.hoisted(() => ({
+  mockGetAccountUrl: vi.fn(() => "https://kc.example/realms/foo/account"),
+}));
+
+vi.mock("oidc-spa/keycloak", () => ({
+  createKeycloakUtils: vi.fn(() => ({
+    getAccountUrl: mockGetAccountUrl,
+  })),
+}));
+
+await import("./kc-account-link.js");
 
 @customElement("test-kc-account-host")
 class TestKcAccountHost extends LitElement {
@@ -18,12 +29,20 @@ class TestKcAccountHost extends LitElement {
   }
 }
 
+const loggedInOidc = {
+  isUserLoggedIn: true as const,
+  issuerUri: "https://kc.example/realms/foo",
+  clientId: "example-spa",
+  validRedirectUri: "http://localhost:5173/",
+};
+
 describe("KcAccountLink", () => {
   const assignSpy = vi.fn();
   const originalLocation = window.location;
 
   beforeEach(() => {
     assignSpy.mockClear();
+    mockGetAccountUrl.mockClear();
     Object.defineProperty(window, "location", {
       configurable: true,
       writable: true,
@@ -45,11 +64,8 @@ describe("KcAccountLink", () => {
   });
 
   it("renders slot when authenticated", async () => {
-    const kc = {
-      createAccountUrl: () => "https://kc.example/realms/foo/account",
-    };
     const host = await fixture<TestKcAccountHost>(html`
-      <test-kc-account-host .authData=${{ keycloak: kc, authenticated: true }}>
+      <test-kc-account-host .authData=${{ oidc: loggedInOidc, authenticated: true }}>
         <kc-account-link>
           <span id="acct">Account</span>
         </kc-account-link>
@@ -62,9 +78,13 @@ describe("KcAccountLink", () => {
   });
 
   it("does not render slot when not authenticated", async () => {
-    const kc = { createAccountUrl: () => "https://kc.example/account" };
     const host = await fixture<TestKcAccountHost>(html`
-      <test-kc-account-host .authData=${{ keycloak: kc, authenticated: false }}>
+      <test-kc-account-host
+        .authData=${{
+          oidc: { ...loggedInOidc, isUserLoggedIn: false as const, login: vi.fn() },
+          authenticated: false,
+        }}
+      >
         <kc-account-link>
           <span id="acct">Account</span>
         </kc-account-link>
@@ -75,11 +95,9 @@ describe("KcAccountLink", () => {
     expect(inner.shadowRoot?.querySelector("slot")).toBeFalsy();
   });
 
-  it("calls createAccountUrl on click (and assigns location)", async () => {
-    const createAccountUrl = vi.fn(() => "https://kc.example/account?x=1");
-    const kc = { createAccountUrl };
+  it("opens the Keycloak account URL on click", async () => {
     const host = await fixture<TestKcAccountHost>(html`
-      <test-kc-account-host .authData=${{ keycloak: kc, authenticated: true }}>
+      <test-kc-account-host .authData=${{ oidc: loggedInOidc, authenticated: true }}>
         <kc-account-link>
           <button type="button" id="btn">Open</button>
         </kc-account-link>
@@ -88,28 +106,10 @@ describe("KcAccountLink", () => {
     const inner = host.querySelector("kc-account-link")!;
     await inner.updateComplete;
     host.querySelector("#btn")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(createAccountUrl).toHaveBeenCalledWith(undefined);
-    expect(assignSpy).toHaveBeenCalledWith("https://kc.example/account?x=1");
-  });
-
-  it("passes redirectUri to createAccountUrl when set", async () => {
-    const createAccountUrl = vi.fn(() => "https://kc.example/account");
-    const kc = { createAccountUrl };
-    const host = await fixture<TestKcAccountHost>(html`
-      <test-kc-account-host .authData=${{ keycloak: kc, authenticated: true }}>
-        <kc-account-link redirect-uri="https://app.example/return">
-          <span id="lnk">Account</span>
-        </kc-account-link>
-      </test-kc-account-host>
-    `);
-    const inner = host.querySelector("kc-account-link")!;
-    await inner.updateComplete;
-    host.querySelector("#lnk")!.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
-    expect(createAccountUrl).toHaveBeenCalledWith({
-      redirectUri: "https://app.example/return",
+    expect(mockGetAccountUrl).toHaveBeenCalledWith({
+      clientId: "example-spa",
+      validRedirectUri: "http://localhost:5173/",
     });
-    expect(assignSpy).toHaveBeenCalledWith("https://kc.example/account");
+    expect(assignSpy).toHaveBeenCalledWith("https://kc.example/realms/foo/account");
   });
 });

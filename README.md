@@ -1,14 +1,49 @@
 # Keycloak Headless
 
-Lit-based web components and small framework helpers (React, Vue, Svelte, Solid) around [keycloak-js](https://www.keycloak.org/docs/latest/securing_apps/#_javascript_adapter), with shared auth state via [@lit/context](https://lit.dev/docs/data/context/).
+Lit-based web components and small framework helpers (React, Vue, Svelte, Solid) built on [oidc-spa](https://docs.oidc-spa.dev), with shared auth state via [@lit/context](https://lit.dev/docs/data/context/).
 
 ## Installation
 
 ```bash
-pnpm add keycloak-headless
+pnpm add keycloak-headless oidc-spa
 # or
-npm install keycloak-headless
+npm install keycloak-headless oidc-spa
 ```
+
+## oidc-spa setup (required)
+
+Apps must initialize [oidc-spa](https://docs.oidc-spa.dev) before the UI loads. Scaffolded projects include this automatically:
+
+1. **`oidcEarlyInit`** in `src/main.ts` (loads `src/main.lazy.ts` when the app should start)
+2. **`oidcSpa()`** Vite plugin in `vite.config.ts`
+
+Manual setup:
+
+```ts
+// src/main.ts
+import { oidcEarlyInit } from "oidc-spa/core";
+
+const { shouldLoadApp } = oidcEarlyInit({
+  BASE_URL: import.meta.env.BASE_URL,
+});
+
+if (shouldLoadApp) {
+  void import("./main.lazy");
+}
+```
+
+```ts
+// vite.config.ts
+import { oidcSpa } from "oidc-spa/vite-plugin";
+
+export default defineConfig({
+  plugins: [oidcSpa(), /* ... */],
+});
+```
+
+Pass `base-url={import.meta.env.BASE_URL}` (or equivalent) to `<kc-provider>` / `KeycloakProvider` so redirect URIs match your app path.
+
+Keycloak client **Valid Redirect URIs** must be exact origin paths with a trailing slash (for example `http://localhost:5173/`), not wildcards like `http://localhost:5173/*`.
 
 ## Quick start
 
@@ -79,39 +114,32 @@ Always import `keycloak-headless/provider` (side-effect or explicit imports) in 
 
 ## Web components
 
-Mount `<kc-provider>` with `url`, `realm`, and `client-id` (or the `clientId` property in frameworks). Optional `scope` and any [Keycloak `init` options](https://www.keycloak.org/docs/latest/securing_apps/#_javascript_adapter) below are forwarded to `keycloak.init()`. Nested components consume `authContext`.
+Mount `<kc-provider>` with `url`, `realm`, and `client-id` (or the `clientId` property in frameworks). Optional `scope`, `on-load`, and `base-url` are forwarded to [`createOidc()`](https://docs.oidc-spa.dev). Nested components consume `authContext`.
 
-**`kc-provider` init attributes** (omit optional flags to keep Keycloak defaults; boolean flags use `true` / `false`, or `0` / `no` for false):
+**`kc-provider` attributes:**
 
-| Attribute | Maps to `KeycloakInitOptions` |
-|-----------|-------------------------------|
-| `on-load` | `onLoad` — `check-sso` (default) or `login-required` |
-| `scope` | `scope` |
-| `use-nonce` | `useNonce` |
-| `adapter` | `adapter` — `default`, `cordova`, or `cordova-native` |
-| `check-login-iframe` | `checkLoginIframe` |
-| `check-login-iframe-interval` | `checkLoginIframeInterval` |
-| `response-mode` | `responseMode` — `query` or `fragment` |
-| `redirect-uri` | `redirectUri` |
-| `silent-check-sso-redirect-uri` | `silentCheckSsoRedirectUri` |
-| `silent-check-sso-fallback` | `silentCheckSsoFallback` |
-| `flow` | `flow` — `standard`, `implicit`, or `hybrid` |
-| `pkce-method` | `pkceMethod` — `S256` or `false` (string) to disable PKCE |
-| `enable-logging` | `enableLogging` |
-| `message-receive-timeout` | `messageReceiveTimeout` |
-| `locale` | `locale` |
-| `logout-method` | `logoutMethod` — `GET` or `POST` |
-
-Programmatic-only (no HTML attribute): set the `token`, `refreshToken`, `idToken`, and `timeSkew` properties when you need to restore a session from your host app.
+| Attribute | Purpose |
+|-----------|---------|
+| `url` | Keycloak server URL |
+| `realm` | Realm name |
+| `client-id` | Public SPA client ID |
+| `on-load` | `check-sso` (default) or `login-required` (maps to oidc-spa `autoLogin`) |
+| `scope` | OAuth scopes (space-separated, e.g. `profile email`) |
+| `base-url` | App base path (default `/`; use `import.meta.env.BASE_URL`) |
+| `enable-logging` | Enable oidc-spa debug logs |
+| `redirect-uri` | Post-login redirect URL override |
+| `retry-attempts` | Max init retries (default `3`) |
+| `retry-delay` | Initial retry delay in ms (default `1000`) |
+| `auto-retry` | Retry failed init (default `true`) |
 
 | Element | Role |
 |---------|------|
-| `<kc-provider>` | Initializes Keycloak and provides auth context. |
-| `<kc-login-button>` | Renders slotted content when the user can log in; click delegates to `keycloak.login()`. |
-| `<kc-logout-button>` | Renders when authenticated; delegates to `keycloak.logout()`. |
-| `<kc-account-link>` | When authenticated, opens the account console URL from `keycloak.createAccountUrl()`. Optional `redirect-uri` attribute. |
+| `<kc-provider>` | Initializes oidc-spa and provides auth context. |
+| `<kc-login-button>` | Renders when the user can log in; click calls `oidc.login()`. |
+| `<kc-logout-button>` | Renders when authenticated; click calls `oidc.logout()`. |
+| `<kc-account-link>` | When authenticated, opens the Keycloak account console via oidc-spa Keycloak utils. |
 | `<kc-render-authenticated>` | Slot visible only when `authenticated` is true. |
-| `<kc-render-guest>` | Slot visible when Keycloak exists and the user is not authenticated. |
+| `<kc-render-guest>` | Slot visible when oidc is ready and the user is not authenticated. |
 | `<kc-render-roles>` | Slot when the user has required realm or client roles (`roles`, `role-kind`, `match`, optional `resource`). |
 | `<kc-error-display>` | Displays errors with user-friendly messages and retry button. |
 | `<kc-loading>` | Shows loading spinner during authentication. |
@@ -137,7 +165,7 @@ export function App() {
 }
 
 function AuthPanel() {
-  const { keycloak, authenticated, error } = useAuth();
+  const { oidc, authenticated, error } = useAuth();
   // …
 }
 ```
@@ -188,7 +216,7 @@ const showAdmin = computed(() => roleChecks.value.hasRealmRole("admin"));
 </script>
 
 <kc-provider url="…" realm="…" client-id="…">
-  <div bind:this={host}>{$auth.keycloak ? "Ready" : "…"}</div>
+  <div bind:this={host}>{$auth.oidc ? "Ready" : "…"}</div>
 </kc-provider>
 ```
 
@@ -204,7 +232,7 @@ export function Panel() {
   let host: HTMLDivElement | undefined;
   const auth = useKeycloakAuth(() => host ?? null);
   return (
-    <div ref={(el) => (host = el)}>{auth().keycloak ? "Ready" : "…"}</div>
+    <div ref={(el) => (host = el)}>{auth().oidc ? "Ready" : "…"}</div>
   );
 }
 ```
@@ -250,7 +278,7 @@ hasRealmRole("admin"); // ok
 hasRealmRole("typo"); // TypeScript error
 ```
 
-The export defines **which roles exist** in the realm; `hasRealmRole` still checks the **current user’s token** via keycloak-js. Regenerate when roles change in Keycloak (the plugin does this automatically in dev when the JSON file changes).
+The export defines **which roles exist** in the realm; `hasRealmRole` checks the **current user's ID token** claims (`realm_access.roles`). Regenerate when roles change in Keycloak (the plugin does this automatically in dev when the JSON file changes).
 
 See [`example/react/vite.config.ts`](example/react/vite.config.ts) and [`example/vue/vite.config.ts`](example/vue/vite.config.ts) for working setups using the committed fixture at `scripts/fixtures/master-roles.json`.
 
@@ -264,11 +292,13 @@ Example `pnpm build` scripts run `tsc --noEmit` before Vite, so invalid role nam
 
 `AuthState` includes:
 
-- `keycloak` — adapter instance (when initialization ran).
-- `authenticated` — boolean when known.
-- `error` — `unknown`; set if `init()` throws, on `onAuthError`, or on `onAuthRefreshError`. Cleared on successful auth sync.
+- `oidc` — oidc-spa client (`Oidc` from `oidc-spa/core`) after initialization.
+- `authenticated` — boolean when known (`oidc.isUserLoggedIn`).
+- `error` — set if initialization fails. Cleared on successful auth sync.
 - `loading` — boolean indicating if authentication is in progress.
 - `loadingMessage` — optional message to display during loading.
+
+With oidc-spa, auth state is stable after init; login, logout, and session expiry typically cause redirects or full page reloads rather than in-place state toggles.
 
 Narrow errors in UI, for example:
 
@@ -522,7 +552,7 @@ const errors = logger.getErrors();
 ```ts
 provider.addEventListener('auth-refresh-error', () => {
   // Show login prompt
-  provider.keycloak?.login();
+  provider.authData.oidc?.login();
 });
 ```
 
@@ -530,8 +560,9 @@ provider.addEventListener('auth-refresh-error', () => {
 
 ```ts
 provider.addEventListener('token-expired', () => {
-  if (!provider.keycloak?.authenticated) {
-    provider.keycloak?.login();
+  const oidc = provider.authData.oidc;
+  if (oidc != null && oidc.isUserLoggedIn === false) {
+    void oidc.login();
   }
 });
 ```
@@ -659,13 +690,13 @@ React wrapper for `<kc-provider>`.
 Hook to access authentication state.
 
 **Returns:** `AuthState` object with:
-- `keycloak` - Keycloak instance
+- `oidc` - oidc-spa client
 - `authenticated` - boolean or undefined
 - `error` - Error if any
 
 **Example:**
 ```tsx
-const { keycloak, authenticated, error } = useAuth();
+const { oidc, authenticated, error } = useAuth();
 ```
 
 #### `useRealmRoles(roles)`
@@ -950,6 +981,31 @@ When reporting issues, please include:
 - Framework and version (React, Vue, etc.)
 - Minimal reproduction code
 - Console errors and network logs
+
+## Migrating from keycloak-js (0.0.x)
+
+Version **0.1.0** replaces `keycloak-js` with native [oidc-spa](https://docs.oidc-spa.dev).
+
+**Breaking changes:**
+
+- `AuthState.keycloak` → `AuthState.oidc` (`Oidc` from `oidc-spa/core`)
+- Add `oidc-spa`, `oidcEarlyInit` entry split, and `oidcSpa()` Vite plugin (see [oidc-spa setup](#oidc-spa-setup-required))
+- Pass `base-url` / `baseUrl` matching `import.meta.env.BASE_URL` to the provider
+- Keycloak client redirect URIs: use exact paths with trailing slash (e.g. `http://localhost:5173/`), not `/*` wildcards
+- Removed `kc-provider` attributes: iframe SSO, implicit/hybrid flow, PKCE disable, token injection, Cordova adapter, etc.
+- Role helpers read ID token claims instead of `keycloak.hasRealmRole()`
+
+**Example:**
+
+```diff
+- const { keycloak, authenticated } = useAuth();
++ const { oidc, authenticated } = useAuth();
+
+- const token = keycloak?.token;
++ const token = oidc?.isUserLoggedIn ? (await oidc.getTokens()).accessToken : undefined;
+```
+
+See [oidc-spa docs](https://docs.oidc-spa.dev) for DPoP, auto logout, and security features.
 
 ## Development
 

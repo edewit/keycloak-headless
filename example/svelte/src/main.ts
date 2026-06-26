@@ -1,4 +1,9 @@
-import { mount } from "svelte";
-import App from "./App.svelte";
+import { oidcEarlyInit } from "oidc-spa/core";
 
-mount(App, { target: document.getElementById("app")! });
+const { shouldLoadApp } = oidcEarlyInit({
+  BASE_URL: import.meta.env.BASE_URL,
+});
+
+if (shouldLoadApp) {
+  void import("./main.lazy");
+}

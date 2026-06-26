@@ -8,6 +8,13 @@ import { authContext, type AuthState } from "./kc-context.js";
 import "../render-authenticated/kc-render-authenticated.js";
 import "../render-guest/kc-render-guest.js";
 
+const mockOidc = {
+  isUserLoggedIn: true as const,
+  issuerUri: "http://localhost:8080/realms/master",
+  clientId: "example-spa",
+  validRedirectUri: "http://localhost:5173/",
+};
+
 @customElement("test-kc-auth-host")
 class TestKcAuthHost extends LitElement {
   @provide({ context: authContext })
@@ -22,7 +29,7 @@ class TestKcAuthHost extends LitElement {
 describe("KcRenderAuthenticated", () => {
   it("renders slotted children when authenticated is true", async () => {
     const host = await fixture<TestKcAuthHost>(html`
-      <test-kc-auth-host .authData=${{ keycloak: {}, authenticated: true }}>
+      <test-kc-auth-host .authData=${{ oidc: mockOidc, authenticated: true }}>
         <kc-render-authenticated>
           <span id="auth-only">Members area</span>
         </kc-render-authenticated>
@@ -37,7 +44,7 @@ describe("KcRenderAuthenticated", () => {
 
   it("does not render slot when authenticated is not true", async () => {
     const host = await fixture<TestKcAuthHost>(html`
-      <test-kc-auth-host .authData=${{ keycloak: {}, authenticated: false }}>
+      <test-kc-auth-host .authData=${{ oidc: mockOidc, authenticated: false }}>
         <kc-render-authenticated>
           <span id="auth-only">Members area</span>
         </kc-render-authenticated>
@@ -51,9 +58,9 @@ describe("KcRenderAuthenticated", () => {
 });
 
 describe("KcRenderGuest", () => {
-  it("renders slotted children when keycloak exists and user is not authenticated", async () => {
+  it("renders slotted children when oidc exists and user is not authenticated", async () => {
     const host = await fixture<TestKcAuthHost>(html`
-      <test-kc-auth-host .authData=${{ keycloak: {}, authenticated: false }}>
+      <test-kc-auth-host .authData=${{ oidc: mockOidc, authenticated: false }}>
         <kc-render-guest>
           <span id="guest-only">Get started</span>
         </kc-render-guest>
@@ -68,7 +75,7 @@ describe("KcRenderGuest", () => {
 
   it("does not render slot when authenticated is true", async () => {
     const host = await fixture<TestKcAuthHost>(html`
-      <test-kc-auth-host .authData=${{ keycloak: {}, authenticated: true }}>
+      <test-kc-auth-host .authData=${{ oidc: mockOidc, authenticated: true }}>
         <kc-render-guest>
           <span id="guest-only">Get started</span>
         </kc-render-guest>
@@ -80,9 +87,9 @@ describe("KcRenderGuest", () => {
     expect(inner.shadowRoot?.querySelector("slot")).toBeFalsy();
   });
 
-  it("does not render slot when keycloak is missing", async () => {
+  it("does not render slot when oidc is missing", async () => {
     const host = await fixture<TestKcAuthHost>(html`
-      <test-kc-auth-host .authData=${{ keycloak: undefined, authenticated: false }}>
+      <test-kc-auth-host .authData=${{ oidc: undefined, authenticated: false }}>
         <kc-render-guest>
           <span id="guest-only">Get started</span>
         </kc-render-guest>

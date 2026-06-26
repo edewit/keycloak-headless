@@ -1,10 +1,10 @@
 import { createContext } from "@lit/context";
-import Keycloak from "keycloak-js";
+import type { Oidc } from "oidc-spa/core";
 
 export interface AuthState {
-  keycloak?: Keycloak;
+  oidc?: Oidc;
   authenticated?: boolean;
-  /** Set when Keycloak initialization fails, or when the adapter reports an auth error. */
+  /** Set when OIDC initialization fails, or when the client reports an auth error. */
   error?: unknown;
   /** Indicates if authentication is currently loading/initializing */
   loading?: boolean;

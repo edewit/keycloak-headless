@@ -1,6 +1,6 @@
 {
   "name": "keycloak-headless",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "description": "Keycloak headless component library built with Lit",
   "type": "module",
   "main": "./dist/index.js",
@@ -105,7 +105,7 @@
     "@lit/context": "^1.1.6",
     "@lit/react": "^1.0.8",
     "commander": "^15.0.0",
-    "keycloak-js": "^26.2.4",
+    "oidc-spa": "^10.2.3",
     "lit": "^3.3.2"
   },
   "peerDependencies": {

@@ -37,6 +37,7 @@ const SKIP_FILES = new Set(["src/keycloak-config.generated.ts"]);
 const CONSUMER_VITE_CONFIGS: Record<Framework, string> = {
   react: `import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { oidcSpa } from "oidc-spa/vite-plugin";
 import { resolve } from "node:path";
 
 import { keycloakRolesPlugin } from "keycloak-headless/vite";
@@ -44,6 +45,7 @@ import { keycloakRolesPlugin } from "keycloak-headless/vite";
 export default defineConfig({
   plugins: [
     react(),
+    oidcSpa(),
     keycloakRolesPlugin({
       input: resolve(__dirname, "keycloak-roles.json"),
       output: resolve(__dirname, "src/keycloak-config.generated.ts"),
@@ -53,6 +55,7 @@ export default defineConfig({
 `,
   vue: `import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { oidcSpa } from "oidc-spa/vite-plugin";
 import { resolve } from "node:path";
 
 import { keycloakRolesPlugin } from "keycloak-headless/vite";
@@ -66,6 +69,7 @@ export default defineConfig({
         },
       },
     }),
+    oidcSpa(),
     keycloakRolesPlugin({
       input: resolve(__dirname, "keycloak-roles.json"),
       output: resolve(__dirname, "src/keycloak-config.generated.ts"),
@@ -75,6 +79,7 @@ export default defineConfig({
 `,
   solid: `import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
+import { oidcSpa } from "oidc-spa/vite-plugin";
 import { resolve } from "node:path";
 
 import { keycloakRolesPlugin } from "keycloak-headless/vite";
@@ -82,6 +87,7 @@ import { keycloakRolesPlugin } from "keycloak-headless/vite";
 export default defineConfig({
   plugins: [
     solid(),
+    oidcSpa(),
     keycloakRolesPlugin({
       input: resolve(__dirname, "keycloak-roles.json"),
       output: resolve(__dirname, "src/keycloak-config.generated.ts"),
@@ -91,6 +97,7 @@ export default defineConfig({
 `,
   svelte: `import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { oidcSpa } from "oidc-spa/vite-plugin";
 import { resolve } from "node:path";
 
 import { keycloakRolesPlugin } from "keycloak-headless/vite";
@@ -98,6 +105,7 @@ import { keycloakRolesPlugin } from "keycloak-headless/vite";
 export default defineConfig({
   plugins: [
     svelte(),
+    oidcSpa(),
     keycloakRolesPlugin({
       input: resolve(__dirname, "keycloak-roles.json"),
       output: resolve(__dirname, "src/keycloak-config.generated.ts"),
@@ -119,6 +127,10 @@ function transformPackageJson(content: string): string {
 
   if (pkg.dependencies?.["keycloak-headless"] === "workspace:*") {
     pkg.dependencies["keycloak-headless"] = "^__KEYCLOAK_HEADLESS_VERSION__";
+  }
+
+  if (pkg.dependencies?.["oidc-spa"] != null) {
+    pkg.dependencies["oidc-spa"] = "^10.2.3";
   }
 
   if (pkg.devDependencies?.["keycloak-headless-role-created"] === "workspace:*") {

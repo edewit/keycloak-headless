@@ -10,5 +10,5 @@ export function useKeycloakConfigRoles<const C extends KeycloakRolesConfig>(
   auth: Ref<AuthState>,
   config: C,
 ) {
-  return computed(() => createRoleCheckerFromConfig(auth.value.keycloak, config));
+  return computed(() => createRoleCheckerFromConfig(auth.value.oidc, config));
 }

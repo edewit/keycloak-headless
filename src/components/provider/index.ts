@@ -20,6 +20,18 @@ export { KcRenderRoles } from "../render-roles/kc-render-roles.js";
 export { KcErrorDisplay } from "../error-display/kc-error-display.js";
 export { KcLoading } from "../loading/kc-loading.js";
 
+export {
+  buildIssuerUri,
+  getRealmRoles,
+  getClientRoles,
+  hasRealmRole,
+  hasClientRole,
+  setupOidcEarlyInit,
+  wrapOidcError,
+  wrapOidcInitializationError,
+} from "../../oidc/index.js";
+export type { Oidc } from "../../oidc/index.js";
+
 // Re-export error types for convenience
 export {
   KeycloakError,

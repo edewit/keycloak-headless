@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { oidcSpa } from "oidc-spa/vite-plugin";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
@@ -19,6 +20,7 @@ export default defineConfig({
         },
       },
     }),
+    oidcSpa(),
     keycloakRolesPlugin({
       input: rolesExport,
       output: resolve(__dirname, "src/keycloak-config.generated.ts"),
